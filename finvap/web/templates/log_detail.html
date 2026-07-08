@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}FinVAP — Event #{{ e.id }}{% endblock %}
+{% block dataset %}<a class="link" href="/logs">← History</a>{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div class="detail-head">
+    <span class="status {{ e.status }} big">{{ e.status }}</span>
+    <h1>#{{ e.id }} · {{ e.command or "—" }} · {{ e.action }}</h1>
+  </div>
+  <p class="muted">
+    <span class="mono">{{ e.ts }}</span>
+    {% if e.run_id %} · run <span class="mono">{{ e.run_id[:8] }}</span>{% endif %}
+    {% if e.duration_ms is not none %} · {{ e.duration_ms }} ms{% endif %}
+  </p>
+</section>
+
+<section class="card">
+  <dl class="kv">
+    {% if e.target %}<dt>Target</dt><dd class="mono">{{ e.target }}</dd>{% endif %}
+    {% if e.summary %}<dt>Summary</dt><dd>{{ e.summary }}</dd>{% endif %}
+  </dl>
+  {% if detail_json %}
+  <h2>Detail</h2>
+  <pre class="code">{{ detail_json }}</pre>
+  {% endif %}
+</section>
+
+{% if artifact %}
+{% set leak = artifact.leak_check or {} %}
+<section class="card ai-proof">
+  <h2>AI call — PII masking proof</h2>
+  <p class="muted small">
+    provider <span class="mono">{{ artifact.provider }}:{{ artifact.model }}</span> ·
+    stage <span class="mono">{{ artifact.stage }}</span> ·
+    leak-check
+    <span class="status {{ 'ok' if leak.result == 'pass' else 'warn' }}">{{ leak.result }}</span>
+    ({{ leak.checked or 0 }} real identifier(s) checked{% if leak.leaked %}, leaked {{ leak.leaked }}{% else %}, none leaked{% endif %})
+  </p>
+
+  <h3>Exact text sent to the LLM (masked)</h3>
+  <pre class="code sent">{{ (artifact.system_prompt or "") }}{% if artifact.user_prompt_sent %}
+
+{{ artifact.user_prompt_sent }}{% endif %}</pre>
+
+  {% if artifact.placeholder_map %}
+  <h3>placeholder → real <span class="muted small">(kept local, never sent)</span></h3>
+  <dl class="kv mono small">
+    {% for ph, real in artifact.placeholder_map.items() %}<dt>{{ ph }}</dt><dd>{{ real }}</dd>{% endfor %}
+  </dl>
+  {% endif %}
+
+  <h3>Model output <span class="muted small">(raw — still masked)</span></h3>
+  <pre class="code">{{ artifact.response_raw or "(empty)" }}</pre>
+
+  {% if artifact.response_unmasked %}
+  <h3>Restored locally for the report <span class="muted small">(unmasked)</span></h3>
+  <pre class="code restored">{{ artifact.response_unmasked }}</pre>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

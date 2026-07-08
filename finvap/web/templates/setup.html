@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}FinVAP — Setup{% endblock %}
+{% block dataset %}new assessment — options, tags, analyse{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <h1>Set up the assessment</h1>
+  <p class="muted">Choose the run options and tag each asset's business context, then
+    <strong>Start analysis</strong> — FinVAP scores every finding, maps it to the
+    framework's clauses and writes the AI description/recommendation. You refine
+    everything afterwards in the UI.</p>
+</section>
+
+<form hx-post="/setup/start" hx-target="#setup-result" hx-swap="innerHTML"
+      hx-disabled-elt="find button">
+
+  <section class="card">
+    <h2>Run settings</h2>
+    <div class="form-grid">
+      {% for k in run_keys %}
+      <label class="tag-field">
+        <span class="muted small">{{ k.label }}</span>
+        {% if k.type == 'choice' %}
+          {# hx-disabled-elt MUST be overridden here: it inherits "find button"
+             from the form, and htmx 2.0.3 crashes mid-request when `find`
+             matches nothing inside the triggering element (no swap happens). #}
+          <select name="{{ k.key }}"
+            {% if k.key == 'provider' %}hx-get="/models" hx-target="#model-field"
+              hx-trigger="change, refresh-models from:body"
+              hx-include="[name=provider]" hx-swap="innerHTML"
+              hx-request='{"timeout":20000}' hx-disabled-elt="this"{% endif %}>
+            {% for opt in k.choices %}
+            <option value="{{ opt }}"{% if config.get(k.key) == opt %} selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+        {% elif k.type == 'model' %}
+          {# Rendered server-side with the page (no on-load fetch to get stuck);
+             still the hx-target for provider changes + the retry link. #}
+          <div id="model-field">
+            {% with ids=model_ids, status=model_status,
+                    unavailable=model_unavailable, current=model_current %}
+              {% include "_model_select.html" %}
+            {% endwith %}
+          </div>
+        {% elif k.type == 'bool' %}
+          <label class="checkline"><input type="checkbox" name="{{ k.key }}" value="1"
+            {% if config.get(k.key) %} checked{% endif %}> enabled</label>
+        {% elif k.key == 'template' %}
+          <select name="template">
+            <option value=""{% if not config.get('template') %} selected{% endif %}>bundled default (VA Template.docx)</option>
+            {% for t in templates_available %}
+            <option value="{{ t }}"{% if config.get('template') == t %} selected{% endif %}>{{ t }}</option>
+            {% endfor %}
+          </select>
+        {% else %}
+          <input name="{{ k.key }}" value="{{ config.get(k.key) }}">
+        {% endif %}
+        <span class="help muted tiny">{{ k.help }}</span>
+      </label>
+      {% endfor %}
+    </div>
+
+    <details class="api-keys">
+      <summary>Cloud API keys <span class="muted small">— only for the openai / anthropic providers</span></summary>
+      <div id="api-keys">
+        {% include "_api_keys.html" %}
+      </div>
+      <span class="help muted tiny">Stored locally in <span class="mono">finvap.secrets.json</span>
+        (gitignored, not in backups). A saved key overrides the environment variable.</span>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>Asset context tags <span class="muted small">— drive the risk score</span></h2>
+    <div class="tag-legend">
+      {% for field in tag_fields %}
+      <details class="tag-guide">
+        <summary>{{ tag_labels[field] }} <span class="qmark" aria-hidden="true">?</span></summary>
+        <dl>
+          {% for opt in tag_options[field] %}
+          <dt class="mono">{{ opt }}</dt><dd>{{ tag_help[field][opt] }}</dd>
+          {% endfor %}
+        </dl>
+      </details>
+      {% endfor %}
+    </div>
+    {% if assets %}
+    <div class="tag-list">
+      {% for a in assets %}
+      <div class="tag-card">
+        <div class="tag-card-head">
+          <span class="mono">{{ a.ip }}</span>
+          <span class="muted small">{{ a.hostname }} · {{ a.n_findings }} finding(s)</span>
+        </div>
+        <div class="tag-fields">
+          {% for field in tag_fields %}
+          <label class="tag-field">
+            <span class="muted small">{{ tag_labels[field] }}</span>
+            <select name="t_{{ a.id }}_{{ field }}">
+              {% for opt in tag_options[field] %}
+              <option value="{{ opt }}"{% if opt == a.tags[field] %} selected{% endif %}>{{ opt }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn" hx-post="/setup/recompute" hx-include="closest form"
+              hx-target="#setup-result" hx-swap="innerHTML" hx-disabled-elt="this">
+        Recompute (score + map)
+      </button>
+      <span class="muted tiny">re-score + re-map after changing tags — no prose rewrite</span>
+    </div>
+    {% else %}
+    <p class="empty muted">No assets with findings yet. Scan a target first
+      (<span class="mono">finvap &lt;target&gt;</span>).</p>
+    {% endif %}
+  </section>
+
+  <div class="form-actions">
+    <button type="submit" class="btn primary">Start analysis</button>
+    <span class="muted tiny">full pass — scoring, mapping + AI prose (can take a few minutes)</span>
+  </div>
+</form>
+
+<div id="setup-result"></div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}FinVAP — History{% endblock %}
+{% block dataset %}audit trail · most recent first{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <h1>Activity history</h1>
+  <p class="muted">Every state-changing action the tool took (the S1 audit trail).
+    LLM calls carry a masking proof — open one to see it.</p>
+</section>
+
+<section class="card">
+  {% if events %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Time</th><th>Run</th><th>Command</th><th>Action</th>
+            <th>Target</th><th>Status</th><th>What happened</th></tr>
+      </thead>
+      <tbody>
+        {% for e in events %}
+        <tr class="clickable" data-href="/logs/{{ e.id }}">
+          <td class="mono">#{{ e.id }}</td>
+          <td class="mono small" title="{{ e.date }}">{{ e.time }}</td>
+          <td class="mono small">{{ e.run }}</td>
+          <td>{{ e.command }}</td>
+          <td class="mono small">{{ e.action }}{% if e.has_ai %} <span class="chip ai">AI</span>{% endif %}</td>
+          <td class="mono small">{{ e.target }}</td>
+          <td><span class="status {{ e.status }}">{{ e.status }}</span></td>
+          <td class="muted small">{{ e.summary }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty muted">No audit events recorded yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

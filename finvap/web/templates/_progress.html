@@ -1,0 +1,9 @@
+<div class="job-progress card">
+  <div class="job-head">
+    <span class="spinner" aria-hidden="true"></span>
+    <span class="job-label small">{{ label | default('working…') }}</span>
+    <span class="mono muted small">{{ percent | default(0) }}%</span>
+  </div>
+  <progress class="pbar" value="{{ percent | default(0) }}" max="100"></progress>
+  {% if detail %}<div class="job-detail muted tiny mono">{{ detail }}</div>{% endif %}
+</div>

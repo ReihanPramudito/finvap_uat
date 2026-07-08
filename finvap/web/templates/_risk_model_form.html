@@ -1,0 +1,100 @@
+{% macro lvl(name, cur, dflt, options) -%}
+<span class="lvl-cell">
+  <select name="{{ name }}" class="lvl{% if cur != dflt %} changed{% endif %}">
+    {% for o in options %}<option value="{{ o }}"{% if o == cur %} selected{% endif %}>{{ o }}</option>{% endfor %}
+  </select>
+  {%- if cur != dflt %}<span class="chg" title="changed from {{ dflt }}">●</span>{% endif %}
+</span>
+{%- endmacro %}
+
+{% if msg %}<div class="banner{% if not msg_ok %} error{% endif %}">{{ msg }}</div>{% endif %}
+
+{% if customized %}
+<div class="banner warn">
+  ⚠ This risk model <strong>deviates from the shipped defaults</strong> (levels assigned per
+  FIPS 199 / NIST SP 800‑60 — citations in <span class="mono">docs/SCORING.md §5</span>).
+  The change is logged in <a class="link" href="/logs">History</a>; the generated report is unchanged.
+</div>
+{% endif %}
+
+<form hx-post="/risk-model" hx-target="#risk-form" hx-swap="innerHTML">
+
+  <section class="card">
+    <h2>Data sensitivity <span class="muted small">→ Confidentiality / Integrity requirement (CR / IR)</span></h2>
+    <div class="table-wrap"><table class="risk-table">
+      <thead><tr><th>Option</th><th>Confidentiality (CR)</th><th>Integrity (IR)</th></tr></thead>
+      <tbody>
+      {% for opt in ds_opts %}
+        <tr>
+          <td class="mono">{{ opt }}</td>
+          <td>{{ lvl('de_data_sensitivity_' ~ opt ~ '_CR', eff.data_sensitivity[opt].CR, default.data_sensitivity[opt].CR, levels) }}</td>
+          <td>{{ lvl('de_data_sensitivity_' ~ opt ~ '_IR', eff.data_sensitivity[opt].IR, default.data_sensitivity[opt].IR, levels) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="card">
+    <h2>Criticality <span class="muted small">→ Availability requirement (AR) + a minimum C/I floor</span></h2>
+    <div class="table-wrap"><table class="risk-table">
+      <thead><tr><th>Option</th><th>Availability (AR)</th><th>Min C/I floor</th></tr></thead>
+      <tbody>
+      {% for opt in crit_opts %}
+        <tr>
+          <td class="mono">{{ opt }}</td>
+          <td>{{ lvl('de_criticality_' ~ opt ~ '_AR', eff.criticality[opt].AR, default.criticality[opt].AR, levels) }}</td>
+          <td>{{ lvl('de_criticality_' ~ opt ~ '_floor', eff.criticality[opt].floor, default.criticality[opt].floor, levels) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    <p class="help muted tiny">The floor lifts a mission‑critical host's C/I requirement to at
+      least this level, even when its data tag is low.</p>
+  </section>
+
+  <section class="card">
+    <h2>Environment <span class="muted small">→ ceiling that caps CR / IR / AR</span></h2>
+    <div class="table-wrap"><table class="risk-table">
+      <thead><tr><th>Option</th><th>Requirement ceiling</th></tr></thead>
+      <tbody>
+      {% for opt in env_opts %}
+        <tr>
+          <td class="mono">{{ opt }}</td>
+          <td>{{ lvl('de_environment_' ~ opt, eff.environment[opt], default.environment[opt], levels) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    <p class="help muted tiny">A non‑production tier can't demand production‑grade protection;
+      the ceiling caps every requirement so it can't score like production.</p>
+  </section>
+
+  <section class="card">
+    <h2>Exposure <span class="muted small">→ Modified Attack Vector for internal‑only hosts</span></h2>
+    <label class="tag-field risk-narrow">
+      <span class="muted small">Steps to lower the Attack Vector when exposure = internal</span>
+      <span class="lvl-cell">
+        <select name="de_exposure_internal_av_steps"
+                class="lvl{% if eff.exposure.internal_av_steps != default.exposure.internal_av_steps %} changed{% endif %}">
+          {% for n in [0, 1, 2] %}<option value="{{ n }}"{% if n == eff.exposure.internal_av_steps %} selected{% endif %}>{{ n }}</option>{% endfor %}
+        </select>
+        {% if eff.exposure.internal_av_steps != default.exposure.internal_av_steps %}<span class="chg" title="changed from {{ default.exposure.internal_av_steps }}">●</span>{% endif %}
+      </span>
+      <span class="help muted tiny">CVSS orders Attack Vector <strong>N</strong>etwork →
+        <strong>A</strong>djacent → <strong>L</strong>ocal → <strong>P</strong>hysical (most to
+        least reachable). An internal‑only host steps this many levels down that ladder:
+        0 = keep base · 1 (default) = one level, e.g. Network→Adjacent · 2 = two levels,
+        e.g. Network→Local. External hosts always keep the worst‑case base vector.</span>
+    </label>
+  </section>
+
+  <div class="form-actions">
+    <button type="submit" class="btn primary">Save</button>
+    <button type="button" class="btn" hx-post="/risk-model/reset"
+            hx-target="#risk-form" hx-swap="innerHTML">Reset to grounded defaults</button>
+    <button type="button" class="btn" hx-post="/risk-model/recompute" hx-include="closest form"
+            hx-target="#risk-result" hx-swap="innerHTML" hx-disabled-elt="this">Recompute scores</button>
+    <span class="muted tiny">Recompute re‑scores every finding + refreshes the regulatory severity — no LLM.</span>
+  </div>
+</form>

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}FinVAP — CVSS Calculator{% endblock %}
+{% block dataset %}build a 3.1 or 4.0 vector, score live{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <h1>CVSS Calculator</h1>
+  <p class="muted">Pick metric values — the vector and score update live. Switch between
+    CVSS 4.0 (current standard) and 3.1 (most legacy clients). Scores are computed in the
+    browser from the FIRST.org formulae.</p>
+</section>
+
+<div class="cvss-tabs" role="tablist">
+  <button class="cvss-tab active" data-tab="v4"  role="tab" aria-selected="true">CVSS 4.0</button>
+  <button class="cvss-tab"        data-tab="v31" role="tab" aria-selected="false">CVSS 3.1</button>
+</div>
+
+<section class="card cvss-pane" id="pane-v4">
+  <div id="standalone-cvss-v4"></div>
+</section>
+
+<section class="card cvss-pane is-hidden" id="pane-v31">
+  <div id="standalone-cvss-v31"></div>
+</section>
+
+<script src="/static/js/cvss_v31.js?v={{ asset_v }}"></script>
+<script src="/static/js/cvss_v4.js?v={{ asset_v }}"></script>
+<script src="/static/js/cvss_page.js?v={{ asset_v }}"></script>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}FinVAP — Projects{% endblock %}
+{% block dataset %}one per client engagement{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <h1>Projects</h1>
+  <p class="muted">Each scan creates a project — its own findings, engagement and report.
+    <strong>Open</strong> one to work on it.</p>
+</section>
+
+<section class="card">
+  {% if projects %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Project</th><th>Targets</th><th class="num">Findings</th><th>Created</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for p in projects %}
+        <tr class="{{ 'active-row' if p.active else '' }}">
+          <td>
+            <form method="post" action="/projects/{{ p.slug }}/rename" class="rename-form">
+              <input name="name" value="{{ p.name }}" aria-label="Project name">
+              <button type="submit" class="btn tiny">Rename</button>
+            </form>
+            {% if p.active %}<span class="chip low">active</span>{% endif %}
+          </td>
+          <td class="mono small">{{ p.targets or "—" }}</td>
+          <td class="num">{{ p.n_findings }}</td>
+          <td class="muted small">{{ p.created_at[:10] }}</td>
+          <td class="num row-actions">
+            <form method="post" action="/projects/{{ p.slug }}/activate">
+              <button type="submit" class="btn primary tiny">Open</button>
+            </form>
+            <details class="del">
+              <summary class="btn tiny">Delete</summary>
+              <form method="post" action="/projects/{{ p.slug }}/delete">
+                <button type="submit" class="btn tiny danger">Confirm delete</button>
+              </form>
+            </details>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty muted">No projects yet. Run <span class="mono">finvap &lt;target&gt;</span>
+    to scan and create one.</p>
+  {% endif %}
+</section>
+{% endblock %}

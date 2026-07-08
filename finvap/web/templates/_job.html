@@ -1,0 +1,4 @@
+<div id="job-{{ job_id }}" hx-get="/progress/{{ job_id }}"
+     hx-trigger="load, every 800ms" hx-swap="innerHTML">
+  {% include "_progress.html" %}
+</div>

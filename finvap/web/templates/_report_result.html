@@ -1,0 +1,16 @@
+{% if error %}
+<section class="card result-error">
+  <strong>Report generation failed.</strong>
+  <span class="mono small">{{ error }}</span>
+</section>
+{% else %}
+<section class="card result-ok">
+  <h2>Report ready</h2>
+  <p>Filled the {{ framework }} template from the current dataset.</p>
+  <p class="downloads">
+    {% if docx %}<a class="btn primary" href="/report/download/{{ docx }}">&darr; DOCX</a>{% endif %}
+    {% if pdf %}<a class="btn" href="/report/download/{{ pdf }}">&darr; PDF</a>{% endif %}
+  </p>
+  {% if warning %}<p class="muted small">&#9888; {{ warning }}</p>{% endif %}
+</section>
+{% endif %}

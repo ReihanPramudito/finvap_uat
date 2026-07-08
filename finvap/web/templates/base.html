@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}FinVAP{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/finvap.css?v={{ asset_v }}">
+  <script src="/static/js/htmx.min.js?v={{ asset_v }}" defer></script>
+  <script src="/static/js/finvap.js?v={{ asset_v }}" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">FinVAP<span class="dot"></span></span>
+      {% set ap = active_project() %}
+      {% if ap %}
+      <details class="project-menu">
+        <summary class="project-chip" title="Rename or switch project">{{ ap.name }} <span class="caret">▾</span></summary>
+        <div class="project-menu-body">
+          <form method="post" action="/projects/{{ ap.slug }}/rename" class="rename-form">
+            <input name="name" value="{{ ap.name }}" aria-label="Project name">
+            <button type="submit" class="btn tiny">Rename</button>
+          </form>
+          <a class="btn tiny wide" href="/projects">Switch / manage projects…</a>
+        </div>
+      </details>
+      {% else %}<a class="project-chip muted" href="/projects" title="Projects">no project</a>{% endif %}
+    </div>
+    <nav class="topnav">
+      <a href="/" class="{{ 'active' if active_nav == 'dashboard' else '' }}">Dashboard</a>
+      <a href="/setup" class="{{ 'active' if active_nav == 'setup' else '' }}">Setup</a>
+      <a href="/risk-model" class="{{ 'active' if active_nav == 'risk' else '' }}">Risk model</a>
+      <a href="/cvss" class="{{ 'active' if active_nav == 'cvss' else '' }}">CVSS calc</a>
+      <a href="/report" class="{{ 'active' if active_nav == 'report' else '' }}">Report</a>
+      <a href="/logs" class="{{ 'active' if active_nav == 'logs' else '' }}">History</a>
+    </nav>
+    <div class="spacer"></div>
+    <div class="dataset muted small">{% block dataset %}{% endblock %}</div>
+  </header>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="foot muted small">
+    FinVAP — local reporting UI · bound to 127.0.0.1 · single operator
+  </footer>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<?xml version="1.0" ?>
+<NessusClientData_v2>
+  <Report name="finvap-lab" xmlns:cm="http://www.nessus.org/cm">
+    <ReportHost name="192.168.44.150">
+      <HostProperties>
+        <tag name="host-ip">192.168.44.150</tag>
+        <tag name="host-fqdn">payments.lab.local</tag>
+        <tag name="operating-system">Linux Kernel 4.15 on Ubuntu 18.04</tag>
+        <tag name="HOST_START">Sun Jun 22 09:00:00 2026</tag>
+      </HostProperties>
+      <ReportItem port="445" svc_name="cifs" protocol="tcp" severity="4" pluginID="100001" pluginName="MS17-010: SMB Remote Code Execution (EternalBlue)" pluginFamily="Windows">
+        <synopsis>The remote host is affected by a remote code execution vulnerability.</synopsis>
+        <description>The remote Windows host is affected by the EternalBlue SMBv1 vulnerability.</description>
+        <solution>Apply the MS17-010 security update.</solution>
+        <risk_factor>Critical</risk_factor>
+        <cve>CVE-2017-0143</cve>
+        <cve>CVE-2017-0144</cve>
+        <cvss_base_score>9.3</cvss_base_score>
+        <cvss_vector>CVSS2#AV:N/AC:M/Au:N/C:C/I:C/A:C</cvss_vector>
+        <cvss3_base_score>8.1</cvss3_base_score>
+        <cvss3_vector>CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H</cvss3_vector>
+        <see_also>https://example.com/ms17-010</see_also>
+      </ReportItem>
+      <ReportItem port="21" svc_name="ftp" protocol="tcp" severity="3" pluginID="100002" pluginName="vsftpd Smiley Face Backdoor" pluginFamily="FTP">
+        <synopsis>The remote FTP server contains a backdoor.</synopsis>
+        <description>The version of vsftpd running on the remote host has been compiled with a backdoor.</description>
+        <solution>Validate the binary and reinstall from a trusted source.</solution>
+        <risk_factor>High</risk_factor>
+        <cve>CVE-2011-2523</cve>
+        <cvss_base_score>7.5</cvss_base_score>
+        <cvss_vector>CVSS2#AV:N/AC:L/Au:N/C:P/I:P/A:P</cvss_vector>
+      </ReportItem>
+      <ReportItem port="0" svc_name="general" protocol="tcp" severity="0" pluginID="19506" pluginName="Nessus Scan Information" pluginFamily="Settings">
+        <synopsis>This plugin displays information about the Nessus scan.</synopsis>
+        <description>Information about this scan: scanner version, plugin set, scan duration.</description>
+        <risk_factor>None</risk_factor>
+      </ReportItem>
+    </ReportHost>
+  </Report>
+</NessusClientData_v2>

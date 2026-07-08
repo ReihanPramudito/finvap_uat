@@ -1,0 +1,17 @@
+<select name="model" id="model-select">
+  <option value=""{% if not current %} selected{% endif %}>(provider default)</option>
+  {% for m in ids %}
+  <option value="{{ m }}"{% if m == current %} selected{% endif %}>{{ m }}</option>
+  {% endfor %}
+  {% if current and current not in ids %}
+  <option value="{{ current }}" selected>{{ current }} (saved)</option>
+  {% endif %}
+  <option value="__custom__">custom…</option>
+</select>
+<input type="text" name="model_custom" id="model-custom" autocomplete="off"
+       placeholder="type a model id" hidden>
+<span class="help muted tiny">
+  {% if unavailable %}⚠ {{ status }} Showing this provider's common ids — pick one,
+    or custom… to type another.
+  {% else %}{{ status }} — pick one, or custom… to type an id.{% endif %}
+</span>

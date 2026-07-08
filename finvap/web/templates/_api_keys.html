@@ -1,0 +1,31 @@
+{# Cloud API-key rows (swap target: #api-keys). Saving/clearing responds with
+   this fragment re-rendered and fires the `refresh-models` event so the model
+   dropdown re-discovers with the new credentials. #}
+{% if key_msg %}<div class="banner{% if not key_msg_ok %} error{% endif %}">{{ key_msg }}</div>{% endif %}
+<div class="form-grid">
+  {% for prov in ['openai', 'anthropic'] %}
+  <label class="tag-field">
+    <span class="muted small">{{ prov }} API key
+      {% if api_keys[prov] == 'saved' %}<span class="chip low">set</span>
+      {% elif api_keys[prov] == 'env' %}<span class="chip info">from env</span>
+      {% else %}<span class="chip info">not set</span>{% endif %}
+    </span>
+    <input type="password" name="{{ prov }}_api_key" autocomplete="off"
+           placeholder="{% if api_keys[prov] %}•••••••• (saved){% else %}paste key here{% endif %}">
+    <span class="key-actions">
+      {# hx-disabled-elt="this" overrides the form's inherited "find button"
+         (htmx 2.0.3 crashes when `find` matches nothing in the trigger). #}
+      <button type="button" class="btn tiny" hx-post="/setup/api-key/{{ prov }}"
+              hx-include="[name={{ prov }}_api_key],[name=provider]"
+              hx-target="#api-keys" hx-swap="innerHTML" hx-disabled-elt="this">
+        Save key &amp; discover models</button>
+      {% if api_keys[prov] == 'saved' %}
+      <button type="button" class="btn tiny" hx-post="/setup/api-key/{{ prov }}/clear"
+              hx-include="[name=provider]"
+              hx-target="#api-keys" hx-swap="innerHTML" hx-disabled-elt="this">
+        Clear key</button>
+      {% endif %}
+    </span>
+  </label>
+  {% endfor %}
+</div>

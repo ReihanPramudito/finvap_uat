@@ -1,0 +1,23 @@
+{% if error %}
+<section class="card result-error">
+  <strong>Recompute failed.</strong>
+  <span class="mono small">{{ error }}</span>
+</section>
+{% else %}
+<section class="card result-ok">
+  <h2>Recompute complete</h2>
+  <p class="muted small">Re‑scored with the current risk model and refreshed the
+    <strong>{{ framework }}</strong> regulatory severity — no LLM used.</p>
+  {% if score %}
+  <p>Scored <strong>{{ score.scored }}</strong> finding(s)
+    {% if score.skipped %}<span class="muted small">({{ score.skipped }} skipped — no CVSS)</span>{% endif %}.</p>
+  {% endif %}
+  {% if fw %}
+  <p>Regulatory band —
+    <span class="chip crit">&uarr; {{ fw.raised }} raised</span>
+    <span class="chip low">&darr; {{ fw.lowered }} lowered</span>
+    <span class="chip info">{{ fw.unchanged }} unchanged</span>.</p>
+  {% endif %}
+  <p><a class="link" href="/">View updated dashboard &rarr;</a></p>
+</section>
+{% endif %}

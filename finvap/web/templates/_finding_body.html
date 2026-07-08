@@ -1,0 +1,207 @@
+{% if msg %}<div class="banner">{{ msg }}</div>{% endif %}
+
+<section class="page-head">
+  <div class="detail-head">
+    <span class="chip {{ sev_class[headline] }} big">{{ headline }}</span>
+    <h1>{{ f.name }}</h1>
+    <button class="btn tiny danger detail-delete" hx-post="/finding/{{ f.id }}/delete"
+            hx-vals='{"redirect": "1"}'
+            hx-confirm="Delete this finding and its scores? This cannot be undone.">Delete finding</button>
+  </div>
+  <p class="muted">
+    {% if f.cve %}<span class="mono">{{ f.cve }}</span> · {% endif %}
+    tool: {{ f.tool }}
+    {% if f.port %} · port {{ f.port }}{% if f.protocol %}/{{ f.protocol }}{% endif %}{% endif %}
+    {% if f.qod is not none %} · QoD {{ f.qod }}%{% endif %}
+    {% if f.score_overridden %} · <span class="chip warn">score overridden</span>{% endif %}
+    {% if f.clauses_overridden %} · <span class="chip warn">clauses overridden</span>{% endif %}
+  </p>
+</section>
+
+<div class="cols">
+  <div class="col-main">
+
+    <section class="card">
+      <h2>Risk score <span class="muted small">— headline uses CVSS {{ primary_version }} (framework-adjusted)</span></h2>
+      {% if layers %}
+      {% for L in layers %}
+      <div class="score-block">
+        <div class="score-ver">CVSS {{ L.version }}</div>
+        <div class="table-wrap">
+          <table class="score-table">
+            <thead><tr><th>Layer</th><th class="num">Score</th><th>Severity</th><th>Vector</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Base <span class="muted small">({{ L.base.source }})</span></td>
+                <td class="num mono">{{ "%.1f"|format(L.base.score) }}</td>
+                <td><span class="chip {{ sev_class[L.base.severity] }}">{{ L.base.severity }}</span></td>
+                <td class="mono small">{{ L.base.vector }}</td>
+              </tr>
+              <tr>
+                <td>Environmental <span class="muted small">(asset context)</span></td>
+                <td class="num mono">{{ "%.1f"|format(L.adj.score) }}</td>
+                <td><span class="chip {{ sev_class[L.adj.severity] }}">{{ L.adj.severity }}</span></td>
+                <td class="mono small">{{ L.adj.vector }}</td>
+              </tr>
+              <tr class="fw-row">
+                <td>Framework-adjusted <span class="muted small">(regulatory)</span></td>
+                {% if L.fw %}
+                <td class="num mono">{{ "%.1f"|format(L.fw.score) if L.fw.score is not none else "—" }}</td>
+                <td><span class="chip {{ sev_class[L.fw.severity] }}">{{ L.fw.severity }}</span></td>
+                <td class="muted small">reclassified by mapped clause(s)</td>
+                {% else %}
+                <td class="num muted">—</td>
+                <td class="muted">unmapped</td>
+                <td class="muted small">no framework change</td>
+                {% endif %}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p class="empty muted">Not scored yet. Tag the asset and recompute.</p>
+      {% endif %}
+
+      <details class="edit">
+        <summary>Override severity / score</summary>
+        <form class="edit-form" hx-post="/finding/{{ f.id }}/override"
+              hx-target="#finding-body" hx-swap="innerHTML">
+          <label class="tag-field">
+            <span class="muted small">Severity</span>
+            <select name="severity">
+              <option value="">— keep —</option>
+              {% for sv in override_severities %}<option value="{{ sv }}">{{ sv }}</option>{% endfor %}
+            </select>
+          </label>
+          <label class="tag-field">
+            <span class="muted small">Score (optional, 0–10)</span>
+            <input name="score" type="number" step="0.1" min="0" max="10" placeholder="e.g. 8.5">
+          </label>
+          <button type="submit" class="btn">Apply override</button>
+          {% if f.score_overridden %}
+          <button type="button" class="btn" hx-post="/finding/{{ f.id }}/clear-override"
+                  hx-target="#finding-body" hx-swap="innerHTML">Clear override</button>
+          {% endif %}
+        </form>
+        <p class="muted small">An override sets a durable flag — a later recompute won't clobber it.</p>
+      </details>
+    </section>
+
+    <section class="card">
+      <h2>Details <span class="muted small">— editable</span></h2>
+      <form class="edit-form stack" hx-post="/finding/{{ f.id }}/edit-text"
+            hx-target="#finding-body" hx-swap="innerHTML">
+        <label class="tag-field">
+          <span class="muted small">Name</span>
+          <input name="name" value="{{ f.name }}">
+        </label>
+        <label class="tag-field">
+          <span class="muted small">Description</span>
+          <textarea name="description" rows="4">{{ f.description or "" }}</textarea>
+        </label>
+        <label class="tag-field">
+          <span class="muted small">Remediation</span>
+          <textarea name="solution" rows="3">{{ f.solution or "" }}</textarea>
+        </label>
+        <div><button type="submit" class="btn">Save text</button></div>
+      </form>
+    </section>
+
+    {% if f.impact %}
+    <section class="card"><h2>Impact</h2><p class="prose">{{ f.impact }}</p></section>
+    {% endif %}
+    {% if f.references %}
+    <section class="card"><h2>References</h2><p class="prose mono small">{{ f.references }}</p></section>
+    {% endif %}
+
+    <section class="card">
+      <h2>Report inputs <span class="muted small">— manual fields filled into the report §4</span></h2>
+      <form class="edit-form stack" hx-post="/finding/{{ f.id }}/report-input"
+            hx-target="#finding-body" hx-swap="innerHTML" hx-encoding="multipart/form-data">
+        <label class="tag-field">
+          <span class="muted small">Reproduction steps <span class="tiny">(one per line → numbered list)</span></span>
+          <textarea name="steps" rows="4">{{ ri.steps }}</textarea>
+        </label>
+
+        <div class="tag-field">
+          <span class="muted small">Proof-of-concept screenshot</span>
+          {% if ri.poc_name %}
+          <img class="shot-preview" src="/uploads/{{ ri.poc_name }}" alt="PoC screenshot">
+          <label class="checkline"><input type="checkbox" name="remove_poc"> <span class="muted small">remove</span></label>
+          {% endif %}
+          <input type="file" name="poc_screenshot" accept="image/*">
+        </div>
+
+        <label class="tag-field">
+          <span class="muted small">Client comments / justification</span>
+          <textarea name="client_comments" rows="2">{{ ri.client_comments }}</textarea>
+        </label>
+
+        <div class="tag-field">
+          <span class="muted small">Post-verification screenshot</span>
+          {% if ri.postverif_name %}
+          <img class="shot-preview" src="/uploads/{{ ri.postverif_name }}" alt="Post-verification screenshot">
+          <label class="checkline"><input type="checkbox" name="remove_postverif"> <span class="muted small">remove</span></label>
+          {% endif %}
+          <input type="file" name="postverif_screenshot" accept="image/*">
+        </div>
+
+        <label class="tag-field">
+          <span class="muted small">Post-verification comments</span>
+          <textarea name="postverif_comments" rows="2">{{ ri.postverif_comments }}</textarea>
+        </label>
+
+        <div><button type="submit" class="btn">Save report inputs</button></div>
+      </form>
+    </section>
+
+  </div>
+
+  <aside class="col-side">
+    <section class="card">
+      <h2>Asset</h2>
+      {% if asset %}
+      <dl class="kv">
+        <dt>IP</dt><dd class="mono">{{ asset.ip_address }}</dd>
+        <dt>Hostname</dt><dd>{{ asset.hostname or "—" }}</dd>
+        <dt>OS</dt><dd>{{ asset.os or "—" }}</dd>
+        <dt>Criticality</dt><dd>{{ asset.criticality.value }}</dd>
+        <dt>Sensitivity</dt><dd>{{ asset.data_sensitivity.value }}</dd>
+        <dt>Exposure</dt><dd>{{ asset.exposure.value }}</dd>
+        <dt>Environment</dt><dd>{{ asset.environment.value }}</dd>
+      </dl>
+      {% else %}<p class="muted">Asset not found.</p>{% endif %}
+    </section>
+
+    <section class="card">
+      <h2>Applicable clauses</h2>
+      {% if clauses %}
+      <ul class="clauses">
+        {% for c in clauses %}
+        <li>
+          <div class="clause-row">
+            <span class="mono">{{ c.citation }}</span>
+            <form class="inline" hx-post="/finding/{{ f.id }}/clause"
+                  hx-target="#finding-body" hx-swap="innerHTML">
+              <input type="hidden" name="remove_clause" value="{{ c.citation }}">
+              <button type="submit" class="btn tiny" title="remove clause">✕</button>
+            </form>
+          </div>
+          {% if c.section %}<div class="muted small">{{ c.section }}</div>{% endif %}
+          {% if c.reason %}<div class="small clause-reason">{{ c.reason }}</div>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted small">No specific clause mapped.</p>
+      {% endif %}
+      <form class="edit-form inline-add" hx-post="/finding/{{ f.id }}/clause"
+            hx-target="#finding-body" hx-swap="innerHTML">
+        <input name="add_clause" placeholder="Add clause, e.g. RMiT 10.23">
+        <button type="submit" class="btn">Add</button>
+      </form>
+    </section>
+  </aside>
+</div>

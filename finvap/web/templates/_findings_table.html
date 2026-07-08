@@ -1,0 +1,31 @@
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Severity</th><th class="num">CVSS</th><th>Finding</th><th>Asset</th><th>Clauses</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for f in findings %}
+      <tr>
+        <td><span class="chip {{ sev_class[f.severity] }}">{{ f.severity }}</span></td>
+        <td class="num mono">{{ "%.1f"|format(f.cvss) if f.cvss is not none else "—" }}</td>
+        <td><a class="link" href="/finding/{{ f.id }}">{{ f.name }}</a></td>
+        <td class="mono">{{ f.ip }}</td>
+        <td class="muted small">{{ f.clauses or "—" }}</td>
+        <td class="num row-actions">
+          <a class="btn tiny" href="/finding/{{ f.id }}">Edit</a>
+          <button class="btn tiny danger" hx-post="/finding/{{ f.id }}/delete"
+                  hx-target="#findings-block" hx-swap="innerHTML" hx-disabled-elt="this"
+                  hx-confirm="Delete finding &quot;{{ f.name }}&quot; and its scores? This cannot be undone.">Delete</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if findings_more %}
+<p class="show-all">
+  <button class="btn" hx-get="/findings/all" hx-target="#findings-block"
+          hx-swap="innerHTML" hx-disabled-elt="this">Show all {{ n_findings_total }} findings</button>
+  <span class="muted tiny">showing top {{ findings|length }} of {{ n_findings_total }}</span>
+</p>
+{% endif %}

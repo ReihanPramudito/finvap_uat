@@ -1,0 +1,26 @@
+{% if error %}
+<section class="card result-error">
+  <strong>Analysis failed.</strong>
+  <span class="mono small">{{ error }}</span>
+</section>
+{% else %}
+<section class="card result-ok">
+  <h2>Analysis complete</h2>
+  <p>
+    Scored <strong>{{ score.scored }}</strong> finding(s)
+    {% if score.skipped %}<span class="muted small">({{ score.skipped }} skipped — no CVSS)</span>{% endif %}.
+  </p>
+  {% if map %}
+  <p>
+    Mapped to <strong>{{ framework }}</strong> — {{ map.mapped }} cite clause(s):
+    <span class="chip crit">&uarr; {{ map.raised }} raised</span>
+    <span class="chip low">&darr; {{ map.lowered }} lowered</span>.
+  </p>
+  {% endif %}
+  {% if prose and prose.rewritten %}
+  <p>AI wrote the description/recommendation for <strong>{{ prose.rewritten }}</strong> finding group(s).</p>
+  {% endif %}
+  {% if map_note %}<p class="muted">{{ map_note }}</p>{% endif %}
+  <p><a class="btn primary" href="/">Review findings &rarr;</a></p>
+</section>
+{% endif %}

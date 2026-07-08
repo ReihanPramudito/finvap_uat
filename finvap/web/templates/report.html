@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}FinVAP — Report{% endblock %}
+{% block dataset %}engagement · SLA · generate{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <h1>Report</h1>
+  <p class="muted">Engagement identity and the remediation SLA shape the report; set them
+    here, then generate the DOCX + PDF from the current dataset. Run settings (framework,
+    LLM, …) live on the <a class="link" href="/setup">Setup</a> page.</p>
+</section>
+
+<section class="card">
+  <h2>What will be generated</h2>
+  <dl class="kv">
+    <dt>Findings</dt><dd>{{ n_findings }} across {{ n_assets }} asset(s)</dd>
+    <dt>Framework</dt><dd>{{ framework }}</dd>
+    <dt>Template</dt><dd>{{ template }}</dd>
+    <dt>LLM provider</dt><dd>{{ provider }}</dd>
+    <dt>Engagement identity</dt>
+    <dd>{{ identity_set }}/{{ identity_total }} fields set{% if identity_set < identity_total %}
+      <span class="muted small">· complete below</span>{% endif %}</dd>
+  </dl>
+</section>
+
+<!-- Engagement identity -->
+<section class="card">
+  <h2>Engagement details <span class="muted small">— report cover + document properties</span></h2>
+  <form hx-post="/report/engagement" hx-target="#eng-msg" hx-swap="innerHTML">
+    <div class="form-grid">
+      {% for k in engagement_keys %}
+      <label class="tag-field">
+        <span class="muted small">{{ k.label }}</span>
+        <input name="{{ k.key }}" value="{{ engagement.get(k.key, '') }}" placeholder="{{ k.help }}">
+      </label>
+      {% endfor %}
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn">Save engagement</button>
+      <span id="eng-msg"></span>
+    </div>
+  </form>
+</section>
+
+<!-- Remediation SLA -->
+<section class="card">
+  <h2>Remediation SLA <span class="muted small">— days from assessment; two exposure tiers</span></h2>
+  <form hx-post="/report/sla" hx-target="#sla-msg" hx-swap="innerHTML">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Severity</th><th class="num">Internet-facing / critical</th><th class="num">Internal</th></tr></thead>
+        <tbody>
+          {% for sev in severities %}
+          <tr>
+            <td><span class="chip {{ sev_class[sev] }}">{{ sev }}</span></td>
+            <td class="num"><input type="number" name="sla_{{ sev }}_ext" value="{{ sla[sev]['ext'] }}" min="1" class="sla-input"></td>
+            <td class="num"><input type="number" name="sla_{{ sev }}_int" value="{{ sla[sev]['int'] }}" min="1" class="sla-input"></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="muted tiny">RMiT S 10.18(b) / TRM 7.4.1 require a severity-based turnaround but
+      set no numbers — these are your policy defaults, not law.</p>
+    <div class="form-actions">
+      <button type="submit" class="btn">Save SLA</button>
+      <span id="sla-msg"></span>
+    </div>
+  </form>
+</section>
+
+<!-- Generate -->
+<section class="card">
+  <h2>Generate <span class="muted small">— dates + cover, then DOCX + PDF</span></h2>
+  <form hx-post="/report/generate" hx-target="#report-result" hx-swap="innerHTML"
+        hx-disabled-elt="find button">
+    <div class="form-grid">
+      {% for k in date_keys %}
+      <label class="tag-field">
+        <span class="muted small">{{ k.label }}</span>
+        <input name="{{ 'date_assessment' if k.key == 'Date_Assessment' else 'date_draft' }}"
+               placeholder="{{ k.label }}">
+      </label>
+      {% endfor %}
+      <label class="tag-field">
+        <span class="muted small">Report stage (cover)</span>
+        <select name="draft_final">
+          <option value="Draft">Draft</option>
+          <option value="Final">Final</option>
+        </select>
+      </label>
+      <label class="tag-field">
+        <span class="muted small">Version (cover)</span>
+        <input name="version" value="0.1" placeholder="e.g. 0.1 / 1.0">
+      </label>
+      <label class="tag-field">
+        <span class="muted small">Cover date <span class="tiny">(blank = draft date)</span></span>
+        <input name="cover_date" placeholder="e.g. 10 Jun 2026">
+      </label>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn primary">Generate DOCX + PDF</button>
+      <span class="muted tiny">the LLM + PDF can take a minute</span>
+    </div>
+  </form>
+</section>
+
+<div id="report-result"></div>
+{% endblock %}

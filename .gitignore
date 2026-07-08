@@ -1,0 +1,39 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# runtime data / secrets
+data/
+*.db
+.env
+.chroma/
+
+# operator preferences for the orchestrator (machine-specific)
+finvap.config.json
+
+# engagement metadata for custom report templates (carries client identifiers)
+finvap.engagement.json
+
+# cloud-provider API keys entered via the web UI (never commit secrets)
+finvap.secrets.json
+
+# local model files
+*.gguf
+
+# FYP working docs / scratch — not deliverables (error.txt also contains a lab cred)
+INVESTIGATION REPORT.pdf
+error.txt
+
+# real client Nessus scans (sensitive infra data) — never commit; keep test fixtures
+*.nessus
+!tests/fixtures/*.nessus
+
+# Claude Code local (machine-specific) settings
+.claude/settings.local.json
+
+# VibeDocs — separate third-party web app (its own git repo), UI reference only
+VibeDocs/

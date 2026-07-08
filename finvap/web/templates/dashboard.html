@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}FinVAP — Dashboard{% endblock %}
+
+{% block dataset %}
+  {{ db_name }}
+  {% if latest_scan %}· latest: {{ latest_scan.tool }} {{ latest_scan.target }} ({{ latest_scan.started }}){% endif %}
+{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <h1>Assessment overview</h1>
+  <p class="muted">Findings for the current dataset — regulatory-adjusted severity.
+    Open a finding to review and edit it.</p>
+</section>
+
+{% if has_findings and not analyzed %}
+<div class="banner">This dataset hasn't been analysed yet —
+  <a class="link" href="/setup">run setup</a> to score, map and write the findings.</div>
+{% endif %}
+
+<section class="stats">
+  <div class="card stat">
+    <div class="stat-num">{{ n_assets }}</div>
+    <div class="stat-label">Assets</div>
+  </div>
+  <div class="card stat">
+    <div class="stat-num">{{ n_findings }}</div>
+    <div class="stat-label">Findings</div>
+  </div>
+  <div class="card stat sev-mix">
+    <div class="stat-label">Severity mix</div>
+    <div class="chips">
+      {% for s in sev_order %}
+        <span class="chip {{ sev_class[s] }}" title="{{ s }}">{{ s[0] }} {{ sev_counts[s] }}</span>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Assets <span class="muted small">({{ n_assets }})</span></h2>
+  {% if assets %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>IP</th><th>Hostname</th><th>OS</th><th>Criticality</th><th>Sensitivity</th>
+            <th>Exposure</th><th>Environment</th><th class="num">Findings</th></tr>
+      </thead>
+      <tbody>
+        {% for a in assets %}
+        <tr>
+          <td class="mono">{{ a.ip }}</td>
+          <td>{{ a.hostname }}</td>
+          <td>{{ a.os }}</td>
+          <td>{{ a.criticality }}</td>
+          <td>{{ a.sensitivity }}</td>
+          <td>{{ a.exposure }}</td>
+          <td>{{ a.environment }}</td>
+          <td class="num">{{ a.n_findings }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty muted">No assets yet. Run <span class="mono">finvap &lt;target&gt;</span> to scan.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Findings <span class="muted small">(worst first{% if findings_more %}, top {{ findings|length }} of {{ n_findings }}{% endif %})</span></h2>
+  {% if findings %}
+  <div id="findings-block">
+    {% include "_findings_table.html" %}
+  </div>
+  {% else %}
+  <p class="empty muted">No findings yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

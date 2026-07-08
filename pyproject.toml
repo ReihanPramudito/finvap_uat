@@ -1,0 +1,49 @@
+[project]
+name = "finvap"
+version = "0.1.0"
+description = "Financial Vulnerability Assessment Platform - CLI"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+    "rich>=13",
+    "sqlmodel>=0.0.21",
+    "python-gvm>=24.0",
+    "python-dotenv>=1.0",
+    "cvss>=3.0",      # Obj 3 risk scoring: v2/v3.1/v4.0 base + environmental recompute
+    "pypdf>=4.0",     # Obj 1: extract clause text from the regulation PDFs
+    "chromadb>=1.0",  # Obj 1: local vector store for regulatory-clause RAG
+    "python-docx>=1.1",   # Obj 4: fill the .docx report template
+    "lxml>=4.9",          # Obj 4: OOXML manipulation for the template fill engine
+    "fastapi>=0.110",     # S5: local reporting web UI (FastAPI + Jinja + HTMX)
+    "uvicorn>=0.27",      # S5: ASGI server for the local web UI
+    "jinja2>=3.1",        # S5: server-rendered templates for the web UI
+    "python-multipart>=0.0.9",  # S5: form / file uploads (finding edits, screenshots)
+]
+
+# chromadb brings its own ONNX embedding model (all-MiniLM-L6-v2) via onnxruntime
+# -- no PyTorch -- so `finvap map` works after a plain `pip install -e .`.
+# The local report LLM runs via Ollama over HTTP (httpx) -- no Python dep, just
+# `ollama` installed + `ollama pull <model>`. The report PDF is produced by
+# LibreOffice headless (`soffice`) -- the only non-pip requirement, and only for
+# the PDF (the DOCX is written with pure-Python python-docx).
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+cloud = ["anthropic>=0.40"]  # Obj 4: optional native Claude provider for reports
+
+[project.scripts]
+finvap = "finvap.cli:app"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["finvap*"]
+
+# Ship the web UI's non-Python assets (templates + static) inside the package.
+[tool.setuptools.package-data]
+"finvap.web" = ["templates/*.html", "static/css/*.css", "static/js/*.js"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}FinVAP — {{ f.name }}{% endblock %}
+{% block dataset %}<a class="link" href="/">← Dashboard</a>{% endblock %}
+
+{% block content %}
+<div id="finding-body">
+  {% include "_finding_body.html" %}
+</div>
+{% endblock %}

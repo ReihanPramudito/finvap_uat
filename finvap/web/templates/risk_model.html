@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}FinVAP — Risk model{% endblock %}
+{% block dataset %}how each context tag shapes the CVSS score{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <h1>Risk model</h1>
+  <p class="muted">These are the weights each asset‑context tag applies to the CVSS
+    environmental score. The mechanism (CR/IR/AR, Modified Attack Vector) is the CVSS
+    v3.1/v4.0 environmental spec itself; the shipped default levels follow FIPS 199's
+    impact definitions and NIST SP 800‑60's information‑type mappings (full citation
+    chain: <span class="mono">docs/SCORING.md §5</span>). Edit a value to tune how your
+    house scores risk, then <strong>Recompute</strong> to apply it to every finding.
+    <strong>Reset</strong> returns to the shipped defaults. Changes are recorded in
+    History; the report is never affected.</p>
+</section>
+
+<div id="risk-form">
+  {% include "_risk_model_form.html" %}
+</div>
+
+<div id="risk-result"></div>
+{% endblock %}
