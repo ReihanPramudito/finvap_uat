@@ -42,7 +42,7 @@ Kali / Debian-based Linux, Python 3.13.
 **1. Install:**
 
 ```bash
-git clone https://github.com/ReihanPramudito/finvap_development.git finvap
+git clone https://github.com/ReihanPramudito/finvap_uat.git finvap
 cd finvap
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e .
