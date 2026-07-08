@@ -7,22 +7,22 @@ Thank you for taking the time to test FinVAP. This guide walks you through insta
 
 ---
 
-## What is FinVAP?
+## About FinVAP
 
-FinVAP scans infrastructure for vulnerabilities, then does what a generic scanner doesn't: it **re-scores every finding by the asset's business context** (a payment gateway isn't a test box), **maps each finding to the specific BNM RMiT / MAS TRM regulatory clause it implicates**, and generates an **auditor-ready DOCX + PDF report** — an AI writes the prose, but every score, clause citation and deadline is computed deterministically, not invented. You scan from the command line; everything else happens in a local web interface that opens automatically.
+FinVAP is a vulnerability assessment tool for the financial sector. It scans infrastructure, adjusts each finding's risk score based on the asset's business context (criticality, data sensitivity, exposure, environment), maps findings to BNM RMiT / MAS TRM regulatory clauses, and generates a DOCX/PDF report. Scanning is run from the command line; tagging, scoring, editing and reporting happen in a local web interface that opens automatically.
 
 ---
 
-## Before you start
+## Prerequisites
 
 | | |
 |---|---|
-| **Time needed** | ~30 minutes of hands-on effort. Total wall-clock time is longer (1–2 hours) because the Greenbone feed sync and the vulnerability scan itself run in the background — you can do something else while they run. |
+| **Time needed** | ~30 min hands-on; ~1–2 hrs total (feed sync + scan run unattended in the background) |
 | **OS** | Kali Linux or Debian-based Linux |
 | **Requires** | Python 3.13, ~5 GB free disk (scan feeds + LLM model), sudo access, internet connection |
 | **You'll need** | A test target to scan — see **Step 5** below |
 
-> **Only scan systems you own or are explicitly authorized to test.** Step 5 below sets up a dedicated, intentionally-vulnerable test VM for this purpose — do not point FinVAP at anything else.
+> **Authorization notice:** You must only scan systems you own or have explicit written authorization to test. Unauthorized scanning of third-party systems may constitute an offence under computer misuse legislation in your jurisdiction and is strictly outside the scope of this evaluation. Step 5 below provides a dedicated, self-hosted test target for this purpose — do not direct FinVAP at any other system.
 
 ---
 
@@ -93,9 +93,14 @@ Do these in order. Each one ends with what you should see — if something doesn
 
 **Expected result:** the terminal shows a host/port/finding summary, and a browser tab opens on its own at `http://127.0.0.1:<port>/setup`.
 
+> Already have a `.nessus` export you're authorized to use? Skip the live scan and run `finvap <file>.nessus` instead — every scenario from here on works identically, no GVM required.
+
 ### Scenario 2 — Tag the asset and run the full analysis
 
-1. On **Setup**, leave the Run settings at their defaults (framework `rmit`, CVSS `3.1`, provider `ollama`).
+1. On **Setup**, under Run settings, choose whichever regulatory framework you prefer — **rmit** (BNM RMiT) or **trm** (MAS TRM) — and set CVSS version to **4.0**. Leave the LLM provider as `ollama`.
+
+   > **Have an OpenAI or Anthropic API key?** Expand **Cloud API keys** on this page and paste it in — a cloud model runs faster than the local one. Every identifier (IP addresses, hostnames) is masked before anything is sent to any provider, local or cloud, and the key itself is stored only in a local file on your machine (`finvap.secrets.json`) — it's never uploaded or shared anywhere else. This step is entirely optional; `ollama` works fine on its own.
+
 2. Under **Asset context tags**, click each **?** icon (Criticality, Data sensitivity, Exposure, Environment) to see what each option affects.
 3. For your scanned asset, set: **Criticality = critical**, **Data sensitivity = financial**, **Exposure = external**, **Environment = production** — simulating a bank's internet-facing payment gateway.
 4. Click **Start analysis**.
@@ -108,8 +113,8 @@ Do these in order. Each one ends with what you should see — if something doesn
 1. Click **Dashboard** in the top nav.
 2. Note the severity mix (Critical / High / Medium / Low counts).
 3. Click any **Critical** finding's name.
-4. On the finding page, review the **Risk score** table — the **Base**, **Environmental**, and **Framework-adjusted** rows, for both CVSS 3.1 and 4.0.
-5. Look at **Applicable clauses** on the right — the specific RMiT clause(s) this finding is cited against.
+4. On the finding page, review the **Risk score** table — the **Base**, **Environmental**, and **Framework-adjusted** rows, shown for both CVSS 3.1 and 4.0 (the version you chose on Setup drives the headline severity shown elsewhere).
+5. Look at **Applicable clauses** on the right — the specific regulatory clause(s) (RMiT or TRM, whichever you chose) this finding is cited against.
 
 **Expected result:** findings are listed worst-first; the finding page shows all three score layers with their CVSS vectors, and at least one cited clause appears for a mapped finding.
 
@@ -129,7 +134,7 @@ This is FinVAP's core idea: the *same* vulnerability is scored differently depen
 
 1. On any finding page, expand **Override severity / score**, set a severity manually (e.g. Critical), and submit.
 2. Under **Details — editable**, change the description text and save.
-3. Under **Applicable clauses**, add a clause manually (type e.g. `RMiT 10.20` and click Add).
+3. Under **Applicable clauses**, add a clause manually (type e.g. `RMiT 10.20` or `TRM 7.4.1` — whichever framework you chose — and click Add).
 4. Open a *different*, less important finding and click **Delete finding**, then confirm.
 
 **Expected result:** the override shows a "score overridden" tag, your edited description persists, the clause list updates, and the deleted finding no longer appears anywhere on the dashboard.
@@ -166,7 +171,7 @@ Neither is required for the survey — skip straight to the wrap-up if you're sh
 
 ## Wrap-up
 
-Fill in the **`FinVAP_UAT_Template.docx`** questionnaire you were sent separately, and send it back. Every statement in it should now be answerable from what you just did — if anything feels unclear or you weren't able to form an opinion on a statement, say so in the Comments section.
+Fill in the **`FinVAP_UAT_Template.docx`** questionnaire you were sent separately and send it back. Note anything unclear in the Comments section.
 
 ---
 

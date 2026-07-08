@@ -59,7 +59,7 @@ finvap doctor                              # verify everything is ready
 ```
 
 Full steps + troubleshooting: **[docs/GVM-SETUP.md](docs/GVM-SETUP.md)**.
-*No Greenbone handy? `finvap <ip> --no-gvm` does an Nmap-only run, or `finvap scan.nessus` imports a Nessus export — both skip GVM entirely.*
+*No Greenbone? Import a Nessus export instead: `finvap file.nessus`*
 
 **3. Install the local LLM** (Ollama — powers the regulatory mapping and report prose):
 
@@ -68,12 +68,15 @@ curl -fsSL https://ollama.com/install.sh | sh
 ollama pull granite3.3:8b
 ```
 
-> **API key note:** the model runs on your machine and FinVAP masks every identifier before it's sent, so nothing leaves the host. Prefer a cloud model instead? Choose the **openai** or **anthropic** provider and paste an API key on the **Setup** page — but be aware your (masked) data then leaves the host.
+> **API key note:** the model runs on your machine and FinVAP masks every identifier before it's sent, so nothing leaves the host. Prefer a cloud model instead? Choose the **openai** or **anthropic** provider and paste an API key on the **Setup** page.
 
 **4. Scan and report:**
 
 ```bash
+# Example
 finvap 192.168.1.10        # scan, then the web UI opens automatically
+# or
+finvap file.nessus         # import, then the web UI opens automatically
 ```
 
 ## Typical Workflow
