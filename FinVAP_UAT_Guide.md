@@ -153,8 +153,12 @@ browser tab opens on its own at `http://127.0.0.1:<port>/setup`.
 1. On **Setup**, under **Run settings**, choose:
    - **Regulatory framework** — `rmit` (BNM RMiT) or `trm` (MAS TRM), your choice.
    - **CVSS version** — `3.1` or `4.0`. (The report will state whichever you pick.)
-   - **LLM provider** — leave as `ollama` (local). *Model* can stay blank for the
-     default.
+   - **LLM provider** — leave as `ollama` (local) for a fully private, offline run.
+     *Prefer a faster run?* You can instead pick the `openai` or `anthropic`
+     provider and paste an API key here — it's noticeably faster than the local
+     model and **still safe**: every identifier (IPs, hostnames) is masked before
+     anything is sent, and the key stays on your machine. See **Optional extras**
+     for how to set it up. *Model* can stay blank for the provider's default.
    - Note the line explaining that scores use the online **NVD**, falling back to
      the scanner's own CVSS if the NVD can't be reached.
 2. Under **Asset context tags**, click each **?** icon (Criticality, Data
@@ -164,7 +168,9 @@ browser tab opens on its own at `http://127.0.0.1:<port>/setup`.
    a bank's internet-facing payment gateway.
 4. Click **Start analysis**.
 5. Wait for it to finish — it scores every finding, maps regulatory clauses, and
-   writes AI descriptions (a few minutes).
+   writes AI descriptions. **This takes ~20–30 minutes with the local `ollama`
+   model** (and is considerably faster if you chose a cloud API key in step 1 —
+   see Optional extras).
 
 **Expected result:** a progress bar completes and you land on a results summary
 (X findings scored, Y mapped).
@@ -241,7 +247,8 @@ dashboard.
    field and click **Save SLA** — note the error message.
 4. Correct it back to a real number (e.g. `7`) and click **Save SLA** again.
 5. Under **Generate**, fill in the assessment window and draft date, then click
-   **Generate DOCX + PDF**.
+   **Generate DOCX + PDF**. **This takes ~2–5 minutes** — one AI executive-summary
+   call plus the PDF render (faster if you're using a cloud API key).
 6. When it finishes, download and open both files.
 
 **Expected result:** step 3's invalid value is rejected with a clear message;
