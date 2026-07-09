@@ -643,6 +643,7 @@ def _report_work(date_assessment: str, date_draft: str, draft_final: str,
 
         saved = user_settings.load()
         framework = saved.get("framework", "rmit")
+        cvss_version = saved.get("cvss", "3.1")
         ctx = {"framework": framework.upper(), "docx": None, "pdf": None,
                "warning": None, "error": None}
         try:
@@ -673,7 +674,8 @@ def _report_work(date_assessment: str, date_draft: str, draft_final: str,
             progress(5, "filling report…")
             with audit.run("web.report", target=framework):
                 paths = fill_template(
-                    tmpl, base, framework=framework, metadata=meta, target=None,
+                    tmpl, base, framework=framework, cvss_version=cvss_version,
+                    metadata=meta, target=None,
                     provider=saved.get("provider") or None, model=saved.get("model") or None,
                     sla_overrides=user_settings.load_sla(), pdf=True, progress=_fill_progress)
             for p in paths:

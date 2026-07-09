@@ -15,9 +15,10 @@ it from the assessment. Three fill mechanisms, by slot:
 
 Findings are **grouped by vulnerability name**: one detailed section + one summary
 row per unique vulnerability, listing every affected host with its own
-regulatory-adjusted (fw_adj) severity; the headline shows the worst case. CVSS 4.0
-is displayed. Output is the filled DOCX (the editable artifact) plus a PDF via
-LibreOffice headless.
+regulatory-adjusted (fw_adj) severity; the headline shows the worst case. The
+CVSS version chosen on the Setup page is displayed (and stamped into the
+``CVSS_Version`` document property). Output is the filled DOCX (the editable
+artifact) plus a PDF via LibreOffice headless.
 """
 from __future__ import annotations
 
@@ -150,8 +151,13 @@ def _split_multi(value: str | None) -> list[str]:
     return out
 
 
-def load_model(framework: str) -> tuple[list[VulnGroup], Counter, list, str]:
-    """Build the grouped report model from the DB. Returns (groups, counts, assets, fw)."""
+def load_model(framework: str, cvss_version: str = "4.0") -> tuple[list[VulnGroup], Counter, list, str]:
+    """Build the grouped report model from the DB. Returns (groups, counts, assets, fw).
+
+    Scores, vectors and severities are read from the requested CVSS version's layer
+    (both 3.1 and 4.0 are always computed and carry their own fw_adj), so the report
+    matches whichever version the operator picked on the Setup page.
+    """
     from sqlmodel import select
 
     from ..db import get_session
@@ -160,8 +166,8 @@ def load_model(framework: str) -> tuple[list[VulnGroup], Counter, list, str]:
     with get_session() as s:
         assets = {a.id: a for a in s.exec(select(Asset)).all()}
         findings = s.exec(select(Finding)).all()
-        fs40 = {f.finding_id: f for f in s.exec(
-            select(FindingScore).where(FindingScore.cvss_version == "4.0")).all()}
+        fs_scores = {f.finding_id: f for f in s.exec(
+            select(FindingScore).where(FindingScore.cvss_version == cvss_version)).all()}
         inputs = {ri.finding_id: ri for ri in s.exec(select(FindingReportInput)).all()}
 
     groups: dict[str, VulnGroup] = {}
@@ -169,7 +175,7 @@ def load_model(framework: str) -> tuple[list[VulnGroup], Counter, list, str]:
         a = assets.get(f.asset_id)
         if a is None:
             continue
-        fs = fs40.get(f.id)
+        fs = fs_scores.get(f.id)
         sev = _disp_sev(fs)
         score = _disp_score(fs)
         g = groups.get(f.name)
@@ -862,9 +868,10 @@ def _norm_cite(text: str) -> str:
     return normalize_citation(text)
 
 
-def fill(template_path, out_base, *, framework: str = "rmit", metadata: dict | None = None,
-         target: str | None = None, provider: str | None = None, model: str | None = None,
-         sla_overrides: dict | None = None, pdf: bool = True, progress=None) -> list[Path]:
+def fill(template_path, out_base, *, framework: str = "rmit", cvss_version: str = "4.0",
+         metadata: dict | None = None, target: str | None = None, provider: str | None = None,
+         model: str | None = None, sla_overrides: dict | None = None, pdf: bool = True,
+         progress=None) -> list[Path]:
     """Fill `template_path` from the DB and write a DOCX (+ PDF). Returns the paths.
 
     `progress` is an optional callback(message) for the CLI spinner — the per-finding
@@ -884,12 +891,13 @@ def fill(template_path, out_base, *, framework: str = "rmit", metadata: dict | N
         raise TemplateError(f"template not found: {template_path}")
     doc = Document(str(template_path))
 
-    groups, counts, assets, fw = load_model(framework)
+    groups, counts, assets, fw = load_model(framework, cvss_version)
     sla = merged_sla(sla_overrides)
 
-    # 1) Document Properties (identity + framework name).
+    # 1) Document Properties (identity + framework name + CVSS version).
     props = {k: v for k, v in (metadata or {}).items() if not k.startswith("__")}
     props["Framework"] = _FW_NAME.get(fw, fw)
+    props["CVSS_Version"] = cvss_version
     _set_docproperties(doc, props)
 
     # 2) LLM prose (masked + audited): the executive summary. Per-finding
