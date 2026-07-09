@@ -29,7 +29,7 @@ local web interface that opens automatically.
 |---|---|
 | **Time needed** | ~30–40 min hands-on; the scan + analysis (~1–1.5 hrs) run unattended in the background |
 | **OS** | Kali Linux or Debian-based Linux |
-| **Requires** | Python 3.13, ~5 GB free disk (scan feeds + LLM model), sudo access, internet connection |
+| **Requires** | Python 3.13, ~10 GB free disk (GVM scan feeds + the ~5 GB LLM model), sudo access, internet connection |
 | **You'll need** | A test target to scan — a free vulnerable VM, set up in **Step 5** below |
 
 > **Authorization notice:** You must only scan systems you own or have explicit
@@ -121,11 +121,13 @@ You need DC-1's IP address, and FinVAP can find it for you.
    ```bash
    finvap 192.168.56.0/24 --discover
    ```
-3. FinVAP lists the live hosts with an **Identification** column — it flags *this
-   machine (scanner)* and the *network gateway / router*, and hints at virtual
-   machines by vendor. The remaining VM host is DC-1. Note its IP.
+3. FinVAP lists the live hosts with an **Identification** column that flags *this
+   machine (scanner)* and the *network gateway / router* (and, where a MAC address
+   is available, the device vendor — e.g. a VirtualBox/VMware VM). DC-1 is the
+   remaining host — the one that's neither your machine nor the gateway. Note its
+   IP.
 
-**Expected result:** a short table of live IPs; you can pick out DC-1 as the VM
+**Expected result:** a short table of live IPs; you can pick out DC-1 as the host
 that isn't your own machine or the gateway. Discovery runs no vulnerability scan
 and creates no project — it's just a lookup.
 

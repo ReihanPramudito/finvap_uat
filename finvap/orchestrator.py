@@ -96,25 +96,29 @@ def _device_hint(vendor: str | None) -> str:
 
 def _local_ips() -> set[str]:
     """Best-effort set of this machine's own IPv4 addresses — so discovery can flag
-    the scanning host itself."""
-    import socket
+    the scanning host itself. Enumerates *every* interface (not just the default
+    route), so a multi-NIC host-only + NAT lab still recognises the scanner on the
+    subnet being scanned."""
+    import re
+    import subprocess
     ips: set[str] = set()
-    try:                                    # the egress interface's IP (no packet sent)
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:                                    # every configured IPv4 address
+        out = subprocess.run(["ip", "-o", "-4", "addr", "show"],
+                             capture_output=True, text=True, timeout=5)
+        ips.update(re.findall(r"\binet (\d+\.\d+\.\d+\.\d+)/", out.stdout))
+    except (OSError, subprocess.SubprocessError):
+        pass
+    if not ips:                             # fallback: just the egress interface's IP
+        import socket
         try:
-            s.connect(("10.255.255.255", 1))
-            ips.add(s.getsockname()[0])
-        finally:
-            s.close()
-    except OSError:
-        pass
-    try:
-        for info in socket.getaddrinfo(socket.gethostname(), None):
-            ip = info[4][0]
-            if "." in ip and not ip.startswith("127."):
-                ips.add(ip)
-    except OSError:
-        pass
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                s.connect(("10.255.255.255", 1))
+                ips.add(s.getsockname()[0])
+            finally:
+                s.close()
+        except OSError:
+            pass
     return ips
 
 
