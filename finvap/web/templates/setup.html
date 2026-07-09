@@ -60,6 +60,11 @@
       {% endfor %}
     </div>
 
+    <p class="help muted tiny">Risk scores use official CVSS data from the
+      <strong>NVD</strong> (online lookup). If the NVD can't be reached, FinVAP
+      automatically falls back to the scanner's native and derived CVSS — scores
+      may differ slightly where the NVD has an official vector.</p>
+
     <details class="api-keys">
       <summary>Cloud API keys <span class="muted small">— only for the openai / anthropic providers</span></summary>
       <div id="api-keys">

@@ -35,11 +35,13 @@ KEYS: list[dict] = [
      "label": "LLM model id",
      "help": "Model id for the chosen provider (e.g. granite3.3:8b, gpt-4o-mini, "
              "claude-sonnet-4-6). Leave blank to use the provider's default."},
+    # No longer surfaced in the UI: scoring always uses the online NVD and falls
+    # back to scan-native/derived vectors at runtime if it's unreachable. Kept as an
+    # internal default (and a knob the test suite can flip to stay off the network).
     {"key": "offline", "type": "bool", "default": False,
      "label": "Offline scoring",
      "help": "Skip NVD online lookups when scoring (use scan-native + derived vectors "
-             "only). Turn on for an air-gapped host; scores can differ where NVD has an "
-             "official vector."},
+             "only). Internal default — scoring is always online with a runtime fallback."},
     {"key": "template", "type": "str", "default": "",
      "label": "Report template (.docx)",
      "help": "A custom Word template in templates/ to fill (e.g. 'VA Template.docx'). "

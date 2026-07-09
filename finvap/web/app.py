@@ -337,9 +337,11 @@ def _tag_row(a: Asset, n_findings: int, saved: bool = False) -> dict:
 # Tagging page.
 # --------------------------------------------------------------------------- #
 
-# The run settings shown on the setup page (the LLM/scoring inputs).
+# The run settings shown on the setup page (the LLM/scoring inputs). `offline` is
+# intentionally NOT surfaced: scoring always uses the online NVD and falls back to
+# scan-native/derived vectors at runtime if the NVD is unreachable.
 _SETUP_KEYS = [k for k in user_settings.KEYS
-               if k["key"] in ("framework", "cvss", "provider", "model", "offline", "template")]
+               if k["key"] in ("framework", "cvss", "provider", "model", "template")]
 
 
 def _templates_available() -> list[str]:
@@ -358,8 +360,6 @@ def _setup_save(form) -> str | None:
     # The model dropdown's "custom…" option defers to a free-text field.
     if values.get("model") == "__custom__":
         values["model"] = (form.get("model_custom") or "").strip()
-    # `offline` is a checkbox — present means on, absent means off.
-    values["offline"] = bool(form.get("offline"))
     for key, valid in _CHOICES.items():
         if key in ("framework", "cvss", "provider") and values.get(key) not in (None, "") \
                 and values[key] not in valid:

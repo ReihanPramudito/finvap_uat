@@ -30,9 +30,9 @@ def _is_nessus(source: str) -> bool:
 # Scan / import
 # --------------------------------------------------------------------------- #
 
-def _scan(console, target: str, gvm: bool):
-    """nmap discovery (+ optional GVM vuln scan), ingested. Raises PipelineError
-    on a hard GVM failure."""
+def _scan(console, target: str):
+    """nmap discovery + GVM vuln scan, ingested. Raises PipelineError on a hard
+    GVM failure."""
     from .scanners.nmap_scanner import NmapScanner
 
     console.print(f"[cyan]nmap[/cyan] scanning [bold]{target}[/bold] …")
@@ -46,8 +46,6 @@ def _scan(console, target: str, gvm: bool):
                 detail={"argv": result.command, "hosts": len(result.assets),
                         "ports": len(result.ports), "scan_id": row.id})
 
-    if not gvm:
-        return
     from rich.progress import (BarColumn, Progress, SpinnerColumn,
                                TaskProgressColumn, TextColumn, TimeElapsedColumn)
 
@@ -75,6 +73,117 @@ def _scan(console, target: str, gvm: bool):
                         "scan_id": row.id, "raw_xml": result.raw_output_path})
 
 
+# MAC-OUI vendor substrings → a friendlier device hint (helps a tester tell the
+# lab VMs apart from real hardware in the discovery output).
+_VENDOR_HINTS = {
+    "pcs systemtechnik": "VirtualBox VM", "oracle": "VirtualBox VM",
+    "vmware": "VMware VM", "qemu": "QEMU/KVM VM", "red hat": "QEMU/KVM VM",
+    "parallels": "Parallels VM", "xensource": "Xen VM",
+}
+
+
+def _device_hint(vendor: str | None) -> str:
+    """A short identification for a host from its MAC vendor (VM type, else the
+    vendor name verbatim); empty string if unknown."""
+    if not vendor:
+        return ""
+    low = vendor.lower()
+    for needle, label in _VENDOR_HINTS.items():
+        if needle in low:
+            return label
+    return vendor
+
+
+def _local_ips() -> set[str]:
+    """Best-effort set of this machine's own IPv4 addresses — so discovery can flag
+    the scanning host itself."""
+    import socket
+    ips: set[str] = set()
+    try:                                    # the egress interface's IP (no packet sent)
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(("10.255.255.255", 1))
+            ips.add(s.getsockname()[0])
+        finally:
+            s.close()
+    except OSError:
+        pass
+    try:
+        for info in socket.getaddrinfo(socket.gethostname(), None):
+            ip = info[4][0]
+            if "." in ip and not ip.startswith("127."):
+                ips.add(ip)
+    except OSError:
+        pass
+    return ips
+
+
+def _default_gateway() -> str | None:
+    """The IPv4 default gateway (Linux ``/proc/net/route``), or None."""
+    import socket
+    import struct
+    try:
+        with open("/proc/net/route") as fh:
+            for line in fh.read().splitlines()[1:]:
+                f = line.split()
+                if len(f) > 2 and f[1] == "00000000":       # destination 0.0.0.0
+                    return socket.inet_ntoa(struct.pack("<L", int(f[2], 16)))
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def discover_hosts(targets: str, *, console) -> None:
+    """nmap host-discovery only: print which IPs in ``targets`` are live, annotated
+    so it's clear what each one is (the scanner itself, the gateway, a lab VM, …).
+
+    A quick "what's alive on this subnet" utility — no vuln scan, no ingest, no
+    project, no web UI (and nothing written to the audit trail). Raises
+    :class:`PipelineError` if nmap can't run.
+    """
+    import re
+
+    from rich.table import Table
+
+    from .scanners.nmap_scanner import NmapScanner
+
+    scan_target = " ".join(p for p in re.split(r"[,\s]+", targets.strip()) if p)
+    console.print(f"[cyan]nmap[/cyan] discovering live hosts on [bold]{scan_target}[/bold] …")
+    try:
+        hosts = NmapScanner().discover(scan_target)
+    except RuntimeError as e:
+        raise PipelineError(str(e)) from e
+
+    if hosts:
+        local, gateway = _local_ips(), _default_gateway()
+        table = Table(title=f"Live hosts ({len(hosts)})")
+        table.add_column("IP address")
+        table.add_column("Hostname")
+        table.add_column("MAC")
+        table.add_column("Identification")
+        for h in hosts:
+            if h["ip"].startswith("127.") or h["ip"] in local:
+                ident = "this machine (scanner)"
+            elif gateway and h["ip"] == gateway:
+                ident = "network gateway / router"
+            else:
+                ident = _device_hint(h.get("vendor"))
+            table.add_row(h["ip"], h.get("hostname") or "[dim]—[/dim]",
+                          h.get("mac") or "[dim]—[/dim]", ident or "[dim]—[/dim]")
+        console.print(table)
+    else:
+        console.print("[yellow]No live hosts found in that range.[/yellow]")
+
+    console.print(
+        "\n[dim]Note: this discovery sweep is limited to hosts that responded to "
+        "probes at the time it was performed. A host that filters or suppresses "
+        "discovery traffic (for example, behind a host-based firewall) may be "
+        "active yet not appear above; its absence from this list must not be "
+        "interpreted as confirmation that the host is offline. To assess a specific "
+        "system, supply its address directly to[/dim] [cyan]finvap <ip>[/cyan][dim], "
+        "which probes the host regardless.[/dim]")
+
+
 def _import(console, file: str):
     from .scanners.nessus_importer import NessusImporter, NessusImportError
 
@@ -97,7 +206,7 @@ def _import(console, file: str):
 # Pipeline
 # --------------------------------------------------------------------------- #
 
-def run_pipeline(source: str, *, console, gvm: bool = True,
+def run_pipeline(source: str, *, console,
                  open_browser: bool = True, port: int | None = None) -> None:
     """Scan/import ``source``, then open the local web UI at the setup page.
 
@@ -113,7 +222,7 @@ def run_pipeline(source: str, *, console, gvm: bool = True,
     if is_nessus:
         _import(console, source)
     else:
-        _scan(console, source, gvm)
+        _scan(console, source)
 
     from .web.server import launch
     console.print("\n[bold]→ opening the web UI[/bold] — set run options + asset tags on "

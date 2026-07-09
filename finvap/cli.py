@@ -4,6 +4,7 @@ Deliberately tiny — three commands:
 
   finvap <target>        scan (nmap + GVM) or import a .nessus file, then open the
   finvap <file.nessus>   local web UI where you tag, score, map and report
+  finvap <target> -d     just list which target IPs are live (host sweep only)
   finvap web             re-open the web UI on the current project
   finvap doctor          check the environment is ready to run a GVM scan
 
@@ -12,7 +13,6 @@ settings, projects, history) lives in the web UI. Run `finvap web` to open it.
 """
 from __future__ import annotations
 
-import functools
 import re
 from typing import Optional
 
@@ -20,25 +20,20 @@ import click
 import typer
 from rich.console import Console
 from rich.table import Table
-from typer.core import TyperGroup
+from typer.core import TyperCommand, TyperGroup
 
 from . import audit
 
 
-def audited(command: str, target_arg: str | None = None):
-    """Record a command invocation in the audit trail (run id + start/outcome +
-    duration). Sub-events emitted inside the body attach to the same run via a
-    context variable, so deep modules need no run id threaded through."""
-    def deco(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            target = None
-            if target_arg is not None and kwargs.get(target_arg) is not None:
-                target = str(kwargs[target_arg])
-            with audit.run(command, target=target):
-                return func(*args, **kwargs)
-        return wrapper
-    return deco
+class RootedCommand(TyperCommand):
+    """Show usage as ``finvap …`` instead of the internal command name.
+
+    The bare-target route dispatches to a hidden ``assess`` command; without this
+    its ``--help`` would read ``Usage: finvap assess …`` and imply an ``assess``
+    subcommand the user never types. Force the program name to ``finvap``.
+    """
+    def format_usage(self, ctx, formatter):
+        formatter.write_usage("finvap", " ".join(self.collect_usage_pieces(ctx)))
 
 
 class DefaultGroup(TyperGroup):
@@ -61,7 +56,17 @@ class DefaultGroup(TyperGroup):
 
 app = typer.Typer(
     cls=DefaultGroup,
-    help="FinVAP - Financial Vulnerability Assessment Platform (CLI)",
+    help=(
+        "FinVAP — Financial Vulnerability Assessment Platform.\n"
+        "\n"
+        "\b\n"
+        "Common usage:\n"
+        "  finvap <target>            scan (nmap + GVM), then open the web UI\n"
+        "  finvap <target> --discover list which target IPs are live (no scan / UI)\n"
+        "  finvap <file.nessus>       import a Nessus export, then open the web UI\n"
+        "  finvap web                 re-open the web UI on the current project\n"
+        "  finvap doctor              check the environment is ready to scan"
+    ),
     no_args_is_help=True,
 )
 
@@ -76,16 +81,16 @@ def _bootstrap():
     projects.load_active()
 
 
-@app.command(hidden=True)
-@audited("assess", target_arg="target")
+@app.command(hidden=True, cls=RootedCommand)
 def assess(
     target: str = typer.Argument(
         ...,
         help="Scan targets — IP(s)/range/CIDR, comma-separated "
              "(e.g. 10.0.0.1,10.0.0.5-20,10.0.0.0/24), or a path to a .nessus file"),
-    gvm: bool = typer.Option(
-        True, "--gvm/--no-gvm",
-        help="Run the GVM vulnerability scan (default). --no-gvm does nmap discovery only."),
+    discover: bool = typer.Option(
+        False, "--discover", "-d",
+        help="List which target IPs are live (nmap host sweep) and exit — no vuln "
+             "scan, no project, no web UI."),
     no_browser: bool = typer.Option(
         False, "--no-browser", help="Start the web UI without opening a browser."),
     port: Optional[int] = typer.Option(
@@ -94,26 +99,41 @@ def assess(
     """Scan TARGET (or import a .nessus file), then open the web UI to tag, score,
     map and report. This is what `finvap <target>` / `finvap <file.nessus>` runs."""
     from . import projects
-    from .orchestrator import PipelineError, _is_nessus, run_pipeline
+    from .orchestrator import PipelineError, _is_nessus, discover_hosts, run_pipeline
 
-    # Normalise multi-target input (comma / whitespace separated) to space-separated
-    # so nmap + GVM each receive individual hosts; ranges/CIDR pass through untouched.
-    if _is_nessus(target):
-        scan_target = proj_targets = target
-    else:
-        parts = [p for p in re.split(r"[,\s]+", target.strip()) if p]
-        scan_target, proj_targets = " ".join(parts), ",".join(parts)
+    # --discover: a standalone liveness sweep — no project, no web UI, not audited.
+    if discover:
+        if _is_nessus(target):
+            console.print("[red]--discover works on scan targets (IPs / range / CIDR), "
+                          "not a .nessus file.[/red]")
+            raise typer.Exit(1)
+        try:
+            discover_hosts(target, console=console)
+        except PipelineError as e:
+            console.print(f"[red]Discovery failed:[/red] {e}")
+            raise typer.Exit(1)
+        return
 
-    # Each assessment is its own project (separate DB + client engagement).
-    slug = projects.create(projects.default_name(proj_targets), targets=proj_targets)
-    console.print(f"[dim]new project:[/dim] {slug}")
+    # A real assessment is one audited run; sub-events (nmap/GVM/ingest) attach to it.
+    with audit.run("assess", target=str(target)):
+        # Normalise multi-target input (comma / whitespace separated) to space-separated
+        # so nmap + GVM each receive individual hosts; ranges/CIDR pass through untouched.
+        if _is_nessus(target):
+            scan_target = proj_targets = target
+        else:
+            parts = [p for p in re.split(r"[,\s]+", target.strip()) if p]
+            scan_target, proj_targets = " ".join(parts), ",".join(parts)
 
-    try:
-        run_pipeline(scan_target, console=console, gvm=gvm,
-                     open_browser=not no_browser, port=port)
-    except PipelineError as e:
-        console.print(f"[red]Assessment stopped:[/red] {e}")
-        raise typer.Exit(1)
+        # Each assessment is its own project (separate DB + client engagement).
+        slug = projects.create(projects.default_name(proj_targets), targets=proj_targets)
+        console.print(f"[dim]new project:[/dim] {slug}")
+
+        try:
+            run_pipeline(scan_target, console=console,
+                         open_browser=not no_browser, port=port)
+        except PipelineError as e:
+            console.print(f"[red]Assessment stopped:[/red] {e}")
+            raise typer.Exit(1)
 
 
 @app.command()

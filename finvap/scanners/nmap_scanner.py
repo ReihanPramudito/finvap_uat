@@ -14,6 +14,12 @@ from .base import DiscoveredAsset, DiscoveredPort, ScanResult
 # Unprivileged-friendly defaults: connect scan + version detection.
 DEFAULT_ARGS = ["-sT", "-sV", "-T4", "--top-ports", "1000", "-Pn"]
 
+# Host-discovery only (a "what's alive" sweep). Note: NO -Pn here — unlike the
+# assessment scan (which force-probes a known target), discovery WANTS nmap to
+# decide liveness. On a local subnet nmap uses ARP (most reliable as root);
+# otherwise it falls back to TCP/ICMP probes.
+DISCOVERY_ARGS = ["-sn", "-T4"]
+
 
 class NmapScanner:
     name = "nmap"
@@ -34,6 +40,40 @@ class NmapScanner:
         result.command = cmd  # literal argv, for the audit trail
         result.meta = {"returncode": proc.returncode}
         return result
+
+    def discover(self, target: str) -> list[dict]:
+        """Host-discovery only: which IPs in `target` are live. Returns a list of
+        ``{ip, hostname, mac, vendor, reason}`` for the hosts nmap reports UP.
+        Raises RuntimeError if nmap can't run at all."""
+        cmd = [self.binary, *DISCOVERY_ARGS, "-oX", "-", *target.split()]
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        if proc.returncode != 0 and not proc.stdout:
+            raise RuntimeError(f"nmap failed: {proc.stderr.strip()}")
+        return self._parse_discovery(proc.stdout)
+
+    @staticmethod
+    def _parse_discovery(xml_text: str) -> list[dict]:
+        hosts: list[dict] = []
+        root = ET.fromstring(xml_text)
+        for host in root.findall("host"):
+            status = host.find("status")
+            if status is not None and status.get("state") != "up":
+                continue
+            ip = next((a.get("addr") for a in host.findall("address")
+                       if a.get("addrtype") in ("ipv4", "ipv6")), None)
+            if not ip:
+                continue
+            mac = next((a for a in host.findall("address")
+                        if a.get("addrtype") == "mac"), None)
+            hn = host.find("hostnames/hostname")
+            hosts.append({
+                "ip": ip,
+                "hostname": hn.get("name") if hn is not None else None,
+                "mac": mac.get("addr") if mac is not None else None,
+                "vendor": mac.get("vendor") if mac is not None else None,
+                "reason": status.get("reason") if status is not None else None,
+            })
+        return hosts
 
     @staticmethod
     def _parse(xml_text: str, target: str) -> ScanResult:
