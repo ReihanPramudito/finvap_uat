@@ -1,24 +1,22 @@
 # FinVAP Reporting Web UI
 
 A local, single-operator web front end for the reporting / human-in-the-loop side
-of FinVAP (supervisor feature **S5**). It **wraps** the existing pipeline — it reads
-and writes the same SQLite DB and calls the same scoring / mapping / report engine;
-it does **not** reimplement any of them. The CLI remains the primary interface for
-scanning.
+of FinVAP. It **wraps** the existing pipeline, it reads
+and writes the same SQLite DB and calls the same scoring / mapping / report engine. The CLI remains the primary interface for scanning.
 
 Stack: **FastAPI + Jinja + HTMX**, server-rendered, with `htmx.min.js` vendored
 locally so the UI needs **no network access**.
 
 ## Security model
 
-- Binds **127.0.0.1 only** — never a routable interface. A non-loopback host (e.g.
+- Binds **127.0.0.1 only**, never a routable interface. A non-loopback host (e.g.
   `0.0.0.0`) is refused and forced back to loopback unless `FINVAP_WEB_ALLOW_LAN=1`.
-- **No auth** — it is meant for one operator on their own machine.
+- **No auth**, it is meant for one operator on their own machine.
 - Conservative response headers on every request: `nosniff`, `X-Frame-Options: DENY`,
   `Referrer-Policy: no-referrer`, and a strict `Content-Security-Policy`
-  (`default-src 'self'`) — everything is same-origin.
-- Every LLM call the UI triggers goes through the **S1 audit trail + PII masking**
-  (the recompute and report actions each run under one audited run; see *History*).
+  (`default-src 'self'`).
+- Every LLM call the UI triggers goes through the **audit trail + PII masking**
+  (the recompute and report actions each run under one audited run. see *History*).
 
 ## Running it
 
@@ -71,10 +69,10 @@ non-intrusive assessment* note when none). The report page's cover fields fill
 ## Credits / licensing
 
 - **htmx** (`static/js/htmx.min.js`) is vendored locally — htmx is BSD-2-Clause.
-- The layout and visual style are **adapted from [VibeDocs](https://github.com/)**
+- The layout and visual style are **adapted from [VibeDocs]([https://github.com/](https://github.com/0xbr3n/VibeDocs))**
   (MIT © 2026 Brendon Teo), rewritten standalone for FinVAP (no auth/theme/presence
   coupling). FinVAP uses its own regulatory-aware engine, not VibeDocs' backend.
-- The **CVSS calculator** (`static/js/cvss_v4.js`, `cvss_v31.js`) is **ported from
+- The **CVSS calculator** (`static/js/cvss_v4.js`, `cvss_v31.js`) is **based on the implementation in
   VibeDocs** (MIT © 2026 Brendon Teo) — 3.1 + 4.0 only (2.0 dropped), styling moved
   into `finvap.css` for the strict CSP. The 4.0 scoring is the official Red Hat /
   FIRST reference algorithm (BSD-2-Clause).
