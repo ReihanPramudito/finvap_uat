@@ -1,13 +1,12 @@
-# FinVAP — User Acceptance Testing (UAT) Guide
+# FinVAP User Acceptance Testing (UAT) Guide
 
 **Project:** FinVAP — Financial Vulnerability Assessment Platform
-**Final Year Project**
 
 Thank you for taking the time to test FinVAP. This guide walks you through
 installing it, finding and scanning a purpose-built test target, and exercising
-every feature you'll be asked about in the survey — in order, with no
-backtracking. The **Scenarios** cover the main workflow (do these top to bottom);
-the **Optional extras** at the end cover secondary features if you have time.
+every feature you'll be asked about in the survey.  
+- The **Scenarios** cover the main workflow (do these top to bottom);
+- The **Optional extras** at the end cover secondary features if you have time.
 
 ---
 
@@ -17,8 +16,8 @@ FinVAP is a vulnerability assessment tool for the financial sector. It scans
 infrastructure, adjusts each finding's risk score based on the asset's business
 context (criticality, data sensitivity, exposure, environment), maps findings to
 **BNM RMiT** (Malaysia) / **MAS TRM** (Singapore) regulatory clauses, and
-generates an auditor-ready DOCX/PDF report. You scan from the command line; all
-the analysis — tagging, scoring, mapping, editing and reporting — happens in a
+generates an auditor-ready DOCX/PDF report. You scan from the command line and all
+the analysis (tagging, scoring, mapping, editing and reporting) happens in a
 local web interface that opens automatically.
 
 ---
@@ -27,37 +26,36 @@ local web interface that opens automatically.
 
 | | |
 |---|---|
-| **Time needed** | ~30–40 min hands-on; the scan + analysis (~1–1.5 hrs) run unattended in the background |
+| **Time needed** | ~30–40 min hands-on. *Note: the scan + analysis (~1–1.5 hrs) run unattended in the background |
 | **OS** | Kali Linux or Debian-based Linux |
 | **Requires** | Python 3.13, ~10 GB free disk (GVM scan feeds + the ~5 GB LLM model), sudo access, internet connection |
-| **You'll need** | A test target to scan — a free vulnerable VM, set up in **Step 5** below |
+| **You'll need** | A test target to scan. (a free vulnerable VM set up in **Step 5** below) |
 
-> **Authorization notice:** You must only scan systems you own or have explicit
-> written authorization to test. Unauthorized scanning of third-party systems may
+> **Authorisation notice:** You must only scan systems you own or have explicit
+> written authorisation to test. Unauthorised scanning of third-party systems may
 > constitute an offence under computer-misuse legislation in your jurisdiction and
 > is strictly outside the scope of this evaluation. Step 5 provides a dedicated,
-> self-hosted test target for this purpose — do not direct FinVAP at any other
-> system.
+> self-hosted test target for this purpose.
 
 ---
 
-## Step 1 — Get FinVAP
+## Step 1 - Get FinVAP
 
 ```bash
 git clone https://github.com/ReihanPramudito/finvap_uat.git
 cd finvap_uat
 ```
 
-## Step 2 — Install
+## Step 2 - Install
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e .
 ```
 
-## Step 3 — Set up Greenbone/GVM (vulnerability scanning)
+## Step 3 - Set up Greenbone/GVM (vulnerability scanning)
 
-One-time setup; the feed sync is the slow part (several GB — let it run in the
+One-time setup. The feed sync might be slow part (several GB, let it run in the
 background).
 
 ```bash
@@ -69,36 +67,32 @@ finvap doctor                              # confirm everything is ready before 
 ```
 
 `finvap doctor` should show all green/OK. If it doesn't, see **Troubleshooting**
-below before moving on — don't proceed with a failing `doctor` check.
+below before moving on. Don't proceed with a failing `doctor` check.
 
-## Step 4 — Install the local LLM
+## Step 4 - Install the local LLM
 
-Powers the regulatory clause mapping and the AI-written report prose. Runs
-entirely on your machine — nothing here needs an internet API.
+Powers the regulatory clause mapping and the AI-written report. Runs
+entirely on your machine.
 
 ```bash
 curl -fsSL https://ollama.com/install.sh | sh
 ollama pull granite3.3:8b
 ```
 
-This downloads a ~5 GB model; it can take a few minutes depending on your
+This downloads a ~5 GB model which can take a few minutes depending on your
 connection.
 
-## Step 5 — Get a target to scan
+## Step 5 - Get a target to scan
 
 FinVAP needs something to scan. Use **DC-1**, a free, purpose-built vulnerable VM
-from VulnHub — small and quick to scan, with a realistic mix of severities.
+from VulnHub.
 
-1. Download it: <https://www.vulnhub.com/entry/dc-1-1,292/> (or search
+1. Download it: <https://download.vulnhub.com/dc/DC-1.zip> (or search
    "DC-1 vulnhub" if that link has moved).
 2. Import the VM into **VirtualBox** or **VMware** (default settings are fine).
 3. Set its network adapter to **Host-only** or **NAT Network** so your Kali host
    and the VM share a subnet.
-4. Boot the VM. You do **not** need to log in — it just needs to be running.
-
-Unlike some practice VMs, DC-1 doesn't hand you console credentials, so you can't
-just log in and read its IP. That's fine — **Scenario 1** uses FinVAP itself to
-find it.
+4. Boot the VM. You do **not** need to log in, it just needs to be running.
 
 **Already have a lab machine you're authorized to scan?** Use it instead and note
 its IP.
@@ -107,31 +101,30 @@ its IP.
 
 ## UAT Test Scenarios
 
-Do these in order. Each ends with what you should see — if something doesn't
-match, note it (that's exactly the kind of feedback we need).
+Do these in order. Each ends with what you should see. If something doesn't
+match, note it.
 
-### Scenario 1 — Discover the target's IP on your network
+### Scenario 1 - Discover the target's IP on your network
 
-You need DC-1's IP address, and FinVAP can find it for you.
+Use FinVAP to discover DC-1's IP.
 
 1. First find your own subnet. On the Kali host run `ip addr` and look at the
-   host-only / NAT-network interface (commonly something like `192.168.56.x` for
-   VirtualBox). The subnet is that address with `.0/24` (e.g. `192.168.56.0/24`).
+   host-only / NAT-network interface (commonly on `eth0`). The subnet is that address with `.0/24` (e.g. `192.168.56.0/24`).
 2. Run a discovery sweep:
    ```bash
    finvap 192.168.56.0/24 --discover
    ```
 3. FinVAP lists the live hosts with an **Identification** column that flags *this
    machine (scanner)* and the *network gateway / router* (and, where a MAC address
-   is available, the device vendor — e.g. a VirtualBox/VMware VM). DC-1 is the
-   remaining host — the one that's neither your machine nor the gateway. Note its
+   is available, the device vendor, e.g. a VirtualBox/VMware VM). DC-1 is the
+   remaining host, the one that's neither your machine nor the gateway. Note its
    IP.
 
-**Expected result:** a short table of live IPs; you can pick out DC-1 as the host
+**Expected result:** a short table of live IPs. You can pick out DC-1 as the host
 that isn't your own machine or the gateway. Discovery runs no vulnerability scan
-and creates no project — it's just a lookup.
+and creates no project, it's just a lookup.
 
-### Scenario 2 — Scan the target and open FinVAP
+### Scenario 2 - Scan the target and open FinVAP
 
 1. With your venv active, run the scan against the IP from Scenario 1:
    ```bash
@@ -139,7 +132,7 @@ and creates no project — it's just a lookup.
    ```
 2. Watch the terminal: an Nmap discovery scan runs first (fast), then the GVM
    vulnerability scan starts with a live progress bar. **This can take 30–60+
-   minutes** depending on your hardware — this is normal, it hasn't frozen.
+   minutes** depending on your hardware.
 3. When it finishes, your browser opens automatically to the FinVAP **Setup**
    page.
 
@@ -147,37 +140,35 @@ and creates no project — it's just a lookup.
 browser tab opens on its own at `http://127.0.0.1:<port>/setup`.
 
 > Already have a `.nessus` export you're authorized to use? You can skip the live
-> scan and run `finvap <file>.nessus` instead — every scenario from here on works
+> scan and run `finvap <file>.nessus` instead. every scenario from here on works
 > identically (see also the Optional extras).
 
-### Scenario 3 — Configure the run and tag the asset, then analyse
+### Scenario 3 - Configure the run and tag the asset, then analyse
 
 1. On **Setup**, under **Run settings**, choose:
-   - **Regulatory framework** — `rmit` (BNM RMiT) or `trm` (MAS TRM), your choice.
-   - **CVSS version** — `3.1` or `4.0`. (The report will state whichever you pick.)
-   - **LLM provider** — leave as `ollama` (local) for a fully private, offline run.
+   - **Regulatory framework** - `rmit` (BNM RMiT) or `trm` (MAS TRM), your choice.
+   - **CVSS version** - `3.1` or `4.0`. (The report will state whichever you pick.)
+   - **LLM provider** - leave as `ollama` (local) for a fully private, offline run.
      *Prefer a faster run?* You can instead pick the `openai` or `anthropic`
-     provider and paste an API key here — it's noticeably faster than the local
-     model and **still safe**: every identifier (IPs, hostnames) is masked before
+     provider and paste an API key here. It's noticeably faster than the local
+     model and **still safe**, every identifier (IPs, hostnames) is masked before
      anything is sent, and the key stays on your machine. See **Optional extras**
      for how to set it up. *Model* can stay blank for the provider's default.
-   - Note the line explaining that scores use the online **NVD**, falling back to
-     the scanner's own CVSS if the NVD can't be reached.
 2. Under **Asset context tags**, click each **?** icon (Criticality, Data
    sensitivity, Exposure, Environment) to see what each option affects.
 3. For your scanned asset, set: **Criticality = critical**, **Data sensitivity =
-   financial**, **Exposure = external**, **Environment = production** — simulating
+   financial**, **Exposure = external**, **Environment = production**, simulating
    a bank's internet-facing payment gateway.
 4. Click **Start analysis**.
-5. Wait for it to finish — it scores every finding, maps regulatory clauses, and
+5. Wait for it to finish. Tt scores every finding, maps regulatory clauses, and
    writes AI descriptions. **This takes ~20–30 minutes with the local `ollama`
-   model** (and is considerably faster if you chose a cloud API key in step 1 —
-   see Optional extras).
+   model** (and is considerably faster if you chose a cloud API key in step 1.
+   See Optional extras).
 
 **Expected result:** a progress bar completes and you land on a results summary
 (X findings scored, Y mapped).
 
-### Scenario 4 — Review the dashboard
+### Scenario 4 - Review the dashboard
 
 1. Click **Dashboard** in the top nav.
 2. Note the severity mix (Critical / High / Medium / Low counts) and the findings
@@ -186,37 +177,33 @@ browser tab opens on its own at `http://127.0.0.1:<port>/setup`.
 **Expected result:** findings are listed with their regulation-adjusted severity,
 highest first, each showing its score.
 
-### Scenario 5 — Inspect a finding (risk layers + regulatory clauses)
+### Scenario 5 - Inspect a finding (risk layers + regulatory clauses)
 
 1. Open the **top finding** in the list (click its name).
-2. Review the **Risk score** table — the **Base**, **Environmental**, and
+2. Review the **Risk score** table, the **Base**, **Environmental**, and
    **Framework-adjusted** rows, shown for both CVSS 3.1 and 4.0 (the version you
-   chose on Setup drives the headline severity shown elsewhere).
-3. Look at **Applicable clauses** — the specific RMiT / TRM clause(s) this finding
+   chose on Setup would be the one shown on the report).
+3. Look at **Applicable clauses** - the specific RMiT / TRM clause(s) this finding
    is cited against.
 
 **Expected result:** the finding page shows all three score layers with their
 CVSS vectors, and at least one cited clause for a mapped finding.
 
-### Scenario 6 — See context-based scoring change the risk
-
-This is FinVAP's core idea: the *same* vulnerability is scored differently
-depending on what it's sitting on.
+### Scenario 6 - See context-based scoring change the risk
 
 1. Go back to **Setup**.
 2. Re-tag the **same asset**: **Criticality = low**, **Data sensitivity =
-   internal**, **Exposure = internal**, **Environment = development** — simulating
-   a throwaway internal test box.
-3. Click **Recompute (score + map)** (not "Start analysis" — this re-scores and
+   internal**, **Exposure = internal**, **Environment = development**, simulating
+   an internal test box.
+3. Click **Recompute (score + map)** (not "Start analysis", this re-scores and
    re-maps without rewriting the AI prose, so it's quicker).
 4. When it finishes, open the **same finding** you looked at in Scenario 5.
 5. Compare its score and severity now against what you saw before.
 
 **Expected result:** the identical vulnerability now shows a different (typically
-lower) adjusted score/severity — proof the same CVE is prioritised by business
-context, not just its raw CVSS.
+lower) adjusted score/severity.
 
-### Scenario 7 — Edit a finding (human-in-the-loop)
+### Scenario 7 - Edit a finding
 
 On any finding page:
 
@@ -227,12 +214,12 @@ On any finding page:
    `TRM 7.4.1` — matching your chosen framework — and click **Add**).
 4. Under **Report inputs**, add a **Proof-of-concept screenshot**, some
    **Reproduction steps**, and a **Client comments / justification** note, then
-   click **Save report inputs**. (These flow into the report.)
+   click **Save report inputs**. (These flow into the report. Could also be left empty.)
 
 **Expected result:** the override shows a "score overridden" tag, your edited
 description and clause list persist, and the report inputs are saved.
 
-### Scenario 8 — Delete a finding
+### Scenario 8 - Delete a finding
 
 1. Open a *less important* finding (further down the list) and click **Delete
    finding**, then confirm. (You can also delete straight from a dashboard row.)
@@ -240,16 +227,16 @@ description and clause list persist, and the report inputs are saved.
 **Expected result:** the deleted finding no longer appears anywhere on the
 dashboard.
 
-### Scenario 9 — Generate the report
+### Scenario 9 - Generate the report
 
 1. Click **Report** in the top nav.
 2. Under **Engagement details**, fill in a client name, your name, etc., and click
    **Save engagement**.
 3. Under **Remediation SLA**, type `0` into the Critical / **Internet-facing**
-   field and click **Save SLA** — note the error message.
+   field and click **Save SLA**. (There should be an error message.)
 4. Correct it back to a real number (e.g. `7`) and click **Save SLA** again.
 5. Under **Generate**, fill in the assessment window and draft date, then click
-   **Generate DOCX + PDF**. **This takes ~2–5 minutes** — one AI executive-summary
+   **Generate DOCX + PDF**. **This takes ~2–5 minutes**, one AI executive-summary
    call plus the PDF render (faster if you're using a cloud API key).
 6. When it finishes, download and open both files.
 
@@ -259,18 +246,16 @@ cover page, an executive summary, findings grouped by vulnerability with their
 adjusted severity and cited clauses, a remediation deadline per severity, and the
 CVSS version you chose on Setup.
 
-### Scenario 10 — Verify privacy & the audit trail
+### Scenario 10 - Audit trail
 
 1. Click **History** in the top nav.
 2. Find an entry with action `llm.call` and open it.
-3. Review the **AI call — PII masking proof** panel: the masked text actually sent
-   to the model, the placeholder→real mapping (kept only on your machine), and the
-   leak-check result.
+3. Review the details, and the leak-check result.
 
 **Expected result:** the leak-check shows **pass**, and the text sent to the AI
 model never contains your asset's real IP address or hostname.
 
-### Scenario 11 — Manage projects
+### Scenario 11 - Manage projects
 
 Each scan you run becomes its own isolated project (its own database and client
 details), so different engagements never mix.
@@ -282,8 +267,8 @@ details), so different engagements never mix.
    to that data.
 3. From the projects list, **Delete** a project you no longer need and confirm.
 
-**Expected result:** renaming updates the chip; switching swaps the whole dataset;
-deleting removes that project. Your active project's data is unaffected by the
+**Expected result:** renaming updates the chip. Switching swaps the whole dataset.
+Seleting removes that project. Your active project's data is unaffected by the
 others.
 
 ---
@@ -352,11 +337,3 @@ browser manually.
 ```bash
 finvap web
 ```
-
----
-
-## Contact
-
-For questions during testing, please contact:
-
-**[Your name]** — [your email]
