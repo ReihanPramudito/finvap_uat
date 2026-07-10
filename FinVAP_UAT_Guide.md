@@ -1,6 +1,6 @@
 # FinVAP User Acceptance Testing (UAT) Guide
 
-**Project:** FinVAP — Financial Vulnerability Assessment Platform
+**Project:** FinVAP - Financial Vulnerability Assessment Platform
 
 Thank you for taking the time to test FinVAP. This guide walks you through
 installing it, finding and scanning a purpose-built test target, and exercising
@@ -275,30 +275,30 @@ others.
 
 ## Optional extras
 
-Not required for the survey — try any of these if you have time.
+Not required for the survey but you could try any of these if you have time.
 
-- **Reopen later without re-scanning** — `finvap web` reopens the UI on your
+- **Reopen later without re-scanning** - `finvap web` reopens the UI on your
   current project. Handy if you close the browser or come back another day.
-- **Import a Nessus file** — instead of a live GVM scan, `finvap <file>.nessus`
-  imports an existing Nessus export; the rest of the workflow is identical.
-- **Use a cloud LLM** — on **Setup**, choose the `openai` or `anthropic` provider,
+- **Import a Nessus file** - instead of a live GVM scan, `finvap <file>.nessus`
+  imports an existing Nessus export. The rest of the workflow is identical.
+- **Use a cloud LLM** - on **Setup**, choose the `openai` or `anthropic` provider,
   expand **Cloud API keys** and paste a key. A cloud model runs faster than the
   local one. Identifiers are still masked before anything is sent, and the key is
-  stored only in a local file (`finvap.secrets.json`) — never uploaded elsewhere.
-- **Tune the risk model** — the **Risk model** page lets you edit how much each
-  context tag moves the score; **Recompute scores** applies the change, and
+  stored only in a local file (`finvap.secrets.json`) and never uploaded elsewhere.
+- **Tune the risk model** - the **Risk model** page lets you edit how much each
+  context tag moves the score. **Recompute scores** applies the change, and
   **Reset to grounded defaults** reverts it.
-- **Standalone CVSS calculator** — the **CVSS calc** page is a self-contained CVSS
+- **Standalone CVSS calculator** - the **CVSS calc** page is a self-contained CVSS
   3.1 / 4.0 calculator, independent of any scan data.
-- **Custom report template** — drop your own `.docx` template into `templates/`
+- **Custom report template** - drop your own `.docx` template into `templates/`
   and pick it under **Run settings** on Setup to have the report filled into your
-  own house style.
+  own style. Details about inserting a custom template is on [docs/TEMPLATES.md](docs/TEMPLATES.md).
 
 ---
 
 ## Wrap-up
 
-Fill in the **`FinVAP_UAT_Template.docx`** questionnaire you were sent separately
+Fill in the **`FinVAP UAT.docx`** questionnaire you were sent separately
 and send it back. Note anything unclear in the Comments section.
 
 ---
