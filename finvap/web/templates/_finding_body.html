@@ -32,27 +32,27 @@
             <thead><tr><th>Layer</th><th class="num">Score</th><th>Severity</th><th>Vector</th></tr></thead>
             <tbody>
               <tr>
-                <td>Base <span class="muted small">({{ L.base.source }})</span></td>
-                <td class="num mono">{{ "%.1f"|format(L.base.score) }}</td>
+                <td class="layer">Base <span class="muted small">({{ L.base.source }})</span></td>
+                <td class="num">{{ "%.1f"|format(L.base.score) }}</td>
                 <td><span class="chip {{ sev_class[L.base.severity] }}">{{ L.base.severity }}</span></td>
-                <td class="mono small">{{ L.base.vector }}</td>
+                <td class="vec">{{ L.base.vector }}</td>
               </tr>
               <tr>
-                <td>Environmental <span class="muted small">(asset context)</span></td>
-                <td class="num mono">{{ "%.1f"|format(L.adj.score) }}</td>
+                <td class="layer">Environmental <span class="muted small">(asset context)</span></td>
+                <td class="num">{{ "%.1f"|format(L.adj.score) }}</td>
                 <td><span class="chip {{ sev_class[L.adj.severity] }}">{{ L.adj.severity }}</span></td>
-                <td class="mono small">{{ L.adj.vector }}</td>
+                <td class="vec">{{ L.adj.vector }}</td>
               </tr>
               <tr class="fw-row">
-                <td>Framework-adjusted <span class="muted small">(regulatory)</span></td>
+                <td class="layer">Framework-adjusted <span class="muted small">(regulatory)</span></td>
                 {% if L.fw %}
-                <td class="num mono">{{ "%.1f"|format(L.fw.score) if L.fw.score is not none else "—" }}</td>
+                <td class="num">{{ "%.1f"|format(L.fw.score) if L.fw.score is not none else "—" }}</td>
                 <td><span class="chip {{ sev_class[L.fw.severity] }}">{{ L.fw.severity }}</span></td>
-                <td class="muted small">reclassified by mapped clause(s)</td>
+                <td class="vec note">reclassified by mapped clause(s)</td>
                 {% else %}
-                <td class="num muted">—</td>
-                <td class="muted">unmapped</td>
-                <td class="muted small">no framework change</td>
+                <td class="num">—</td>
+                <td><span class="muted">unmapped</span></td>
+                <td class="vec note">no framework change</td>
                 {% endif %}
               </tr>
             </tbody>
@@ -131,7 +131,8 @@
           <img class="shot-preview" src="/uploads/{{ ri.poc_name }}" alt="PoC screenshot">
           <label class="checkline"><input type="checkbox" name="remove_poc"> <span class="muted small">remove</span></label>
           {% endif %}
-          <input type="file" name="poc_screenshot" accept="image/*">
+          <input type="file" name="poc_screenshot" accept="image/*" data-preview="poc-preview">
+          <div class="file-preview" id="poc-preview"><img alt="Proof-of-concept preview"></div>
         </div>
 
         <label class="tag-field">
@@ -145,7 +146,8 @@
           <img class="shot-preview" src="/uploads/{{ ri.postverif_name }}" alt="Post-verification screenshot">
           <label class="checkline"><input type="checkbox" name="remove_postverif"> <span class="muted small">remove</span></label>
           {% endif %}
-          <input type="file" name="postverif_screenshot" accept="image/*">
+          <input type="file" name="postverif_screenshot" accept="image/*" data-preview="postverif-preview">
+          <div class="file-preview" id="postverif-preview"><img alt="Post-verification preview"></div>
         </div>
 
         <label class="tag-field">
@@ -189,8 +191,8 @@
               <button type="submit" class="btn tiny" title="remove clause">✕</button>
             </form>
           </div>
-          {% if c.section %}<div class="muted small">{{ c.section }}</div>{% endif %}
-          {% if c.reason %}<div class="small clause-reason">{{ c.reason }}</div>{% endif %}
+          {% if c.section %}<div class="clause-title">{{ c.section }}</div>{% endif %}
+          {% if c.reason %}<div class="clause-reason">{{ c.reason }}</div>{% endif %}
         </li>
         {% endfor %}
       </ul>

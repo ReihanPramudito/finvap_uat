@@ -47,27 +47,27 @@ TAG_OPTIONS = {field: [e.value for e in enum] for field, _, enum in TAG_FIELDS}
 # Shown behind the (?) on each tag so the operator knows what they're picking.
 TAG_OPTION_HELP = {
     "criticality": {
-        "low": "Non-essential host — an outage is a minor inconvenience. Availability requirement AR:Low.",
-        "medium": "Supporting system — downtime is disruptive but tolerable. AR:Medium and a Medium CR/IR floor.",
-        "high": "Important business system — downtime hurts operations. AR:High and a High CR/IR floor.",
-        "critical": "Mission-critical — downtime halts the business or breaches obligations. AR:High and a High CR/IR floor.",
+        "low": "Non-essential; an outage is a minor inconvenience. AR:Low.",
+        "medium": "Supporting system; downtime is disruptive but tolerable. AR:Medium, Medium CR/IR floor.",
+        "high": "Important system; downtime hurts operations. AR:High, High CR/IR floor.",
+        "critical": "Mission-critical; downtime halts the business or breaches obligations. AR:High, High CR/IR floor.",
     },
     "data_sensitivity": {
-        "public": "Only public / non-sensitive data. Confidentiality & Integrity requirements CR:Low / IR:Low.",
-        "internal": "Internal-use data, not for release. CR:Low / IR:Medium.",
-        "confidential": "Sensitive business data (contracts, IP). CR:Medium / IR:Medium.",
-        "pii": "Personal data — privacy / PDPA exposure on breach. CR:High / IR:Medium.",
-        "financial": "Financial / payment data (cardholder, account). CR:High / IR:High — a breach is a regulatory event.",
+        "public": "Public / non-sensitive data only. CR:Low, IR:Low.",
+        "internal": "Internal-use, not for release. CR:Low, IR:Medium.",
+        "confidential": "Sensitive business data (contracts, IP). CR:Medium, IR:Medium.",
+        "pii": "Personal data; PDPA exposure on breach. CR:High, IR:Medium.",
+        "financial": "Financial/payment data (cardholder, account); a breach is a regulatory event. CR:High, IR:High.",
     },
     "exposure": {
-        "internal": "Reachable only from inside the network — Attack Vector stepped down one level from base (harder to reach).",
-        "external": "Internet-facing / reachable by untrusted networks — Attack Vector kept at the base worst case.",
+        "internal": "Reachable only from inside the network. Attack Vector stepped down one level (harder to reach).",
+        "external": "Internet-facing / untrusted networks. Attack Vector kept at base (worst case).",
     },
     "environment": {
-        "production": "Live system serving real users/data — no cap; the full requirements above apply.",
-        "staging": "Pre-production mirror — requirements capped at Medium.",
-        "uat": "User-acceptance testing — requirements capped at Medium.",
-        "development": "Dev/test box with no real data — requirements capped at Low.",
+        "production": "Live system with real users/data. No cap; full requirements apply.",
+        "staging": "Pre-production mirror. Requirements capped at Medium.",
+        "uat": "User-acceptance testing. Requirements capped at Medium.",
+        "development": "Dev/test box, no real data. Requirements capped at Low.",
     },
 }
 
@@ -126,12 +126,20 @@ def _parse_clauses(raw: str | None) -> list[dict]:
     return [{"citation": c.strip()} for c in raw.split(",") if c.strip()]
 
 
-def _fw_sev_map(session: Session, version: str) -> dict[int, str]:
-    """finding_id -> regulatory-adjusted severity for `version` (fw_adj, else
-    environmental, else base). Lets the dashboard reflect the tagging→map escalation."""
-    out: dict[int, str] = {}
+def _fw_display_map(session: Session, version: str) -> dict[int, dict]:
+    """finding_id -> {"severity", "score"} from the regulatory-adjusted layer of
+    `version` (fw_adj, else environmental, else base). Severity AND score are taken
+    from the SAME layer so the dashboard's chip and CVSS number always agree — e.g. a
+    clause-escalated finding reads "Critical 9.0", never "Critical 6.9"."""
+    out: dict[int, dict] = {}
     for sc in session.exec(select(FindingScore).where(FindingScore.cvss_version == version)).all():
-        out[sc.finding_id] = _norm_sev(sc.fw_adj_severity or sc.adj_severity or sc.base_severity)
+        if sc.fw_adj_severity is not None:
+            sev, score = sc.fw_adj_severity, sc.fw_adj_score
+        elif sc.adj_severity is not None:
+            sev, score = sc.adj_severity, sc.adj_score
+        else:
+            sev, score = sc.base_severity, sc.base_score
+        out[sc.finding_id] = {"severity": _norm_sev(sev), "score": score}
     return out
 
 
@@ -144,18 +152,25 @@ def _finding_rows(session: Session) -> list[dict]:
     Shared by the dashboard and the /findings/all "show all" endpoint."""
     assets = session.exec(select(Asset)).all()
     findings = session.exec(select(Finding)).all()
-    fw_sev = _fw_sev_map(session, user_settings.load().get("cvss", "3.1"))
+    fw = _fw_display_map(session, user_settings.load().get("cvss", "3.1"))
     ip_by_id = {a.id: a.ip_address for a in assets}
     rank = {s: i for i, s in enumerate(SEVERITY_ORDER)}
 
-    def disp(f: Finding) -> str:
-        return fw_sev.get(f.id) or _disp_sev(f)
+    def disp_sev(f: Finding) -> str:
+        d = fw.get(f.id)
+        return d["severity"] if d else _disp_sev(f)
+
+    def disp_cvss(f: Finding):
+        d = fw.get(f.id)
+        if d and d["score"] is not None:
+            return d["score"]
+        return f.cvss_adjusted if f.cvss_adjusted is not None else f.cvss_base
 
     return sorted(
         ({
             "id": f.id, "name": f.name, "ip": ip_by_id.get(f.asset_id, "?"),
-            "severity": disp(f),
-            "cvss": f.cvss_adjusted if f.cvss_adjusted is not None else f.cvss_base,
+            "severity": disp_sev(f),
+            "cvss": disp_cvss(f),
             "clauses": ", ".join(c.get("citation", "") for c in _parse_clauses(f.regulatory_clauses)),
         } for f in findings),
         key=lambda r: (rank[r["severity"]], -(r["cvss"] or 0.0)),
@@ -168,10 +183,11 @@ def _dashboard_context(session: Session) -> dict:
     scans = session.exec(select(Scan).order_by(Scan.id.desc())).all()
 
     primary = user_settings.load().get("cvss", "3.1")
-    fw_sev = _fw_sev_map(session, primary)
+    fw = _fw_display_map(session, primary)
 
     def disp(f: Finding) -> str:
-        return fw_sev.get(f.id) or _disp_sev(f)
+        d = fw.get(f.id)
+        return d["severity"] if d else _disp_sev(f)
 
     per_asset: dict[int, int] = {}
     sev_counts = {s: 0 for s in SEVERITY_ORDER}

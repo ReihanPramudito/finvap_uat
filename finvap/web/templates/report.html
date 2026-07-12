@@ -47,7 +47,7 @@
   <h2>Remediation SLA <span class="muted small">— days from assessment; two exposure tiers</span></h2>
   <form hx-post="/report/sla" hx-target="#sla-msg" hx-swap="innerHTML">
     <div class="table-wrap">
-      <table>
+      <table class="sla-table">
         <thead><tr><th>Severity</th><th class="num">Internet-facing / critical</th><th class="num">Internal</th></tr></thead>
         <tbody>
           {% for sev in severities %}
@@ -60,7 +60,7 @@
         </tbody>
       </table>
     </div>
-    <p class="muted tiny">RMiT S 10.18(b) / TRM 7.4.1 require a severity-based turnaround but
+    <p class="muted tiny sla-note">RMiT S 10.18(b) / TRM 7.4.1 require a severity-based turnaround but
       set no numbers — these are your policy defaults, not law.</p>
     <div class="form-actions">
       <button type="submit" class="btn">Save SLA</button>

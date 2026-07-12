@@ -16,12 +16,13 @@
 </section>
 
 <section class="card">
+  <h2>Event</h2>
   <dl class="kv">
     {% if e.target %}<dt>Target</dt><dd class="mono">{{ e.target }}</dd>{% endif %}
     {% if e.summary %}<dt>Summary</dt><dd>{{ e.summary }}</dd>{% endif %}
   </dl>
   {% if detail_json %}
-  <h2>Detail</h2>
+  <div class="subhead">Detail</div>
   <pre class="code">{{ detail_json }}</pre>
   {% endif %}
 </section>
@@ -29,7 +30,7 @@
 {% if artifact %}
 {% set leak = artifact.leak_check or {} %}
 <section class="card ai-proof">
-  <h2>AI call — PII masking proof</h2>
+  <h2>AI call <span class="muted">— PII masking proof</span></h2>
   <p class="muted small">
     provider <span class="mono">{{ artifact.provider }}:{{ artifact.model }}</span> ·
     stage <span class="mono">{{ artifact.stage }}</span> ·
@@ -38,23 +39,25 @@
     ({{ leak.checked or 0 }} real identifier(s) checked{% if leak.leaked %}, leaked {{ leak.leaked }}{% else %}, none leaked{% endif %})
   </p>
 
-  <h3>Exact text sent to the LLM (masked)</h3>
+  <div class="subhead">Exact text sent to the LLM <span class="muted">(masked)</span> <span class="flag sent">left the machine</span></div>
   <pre class="code sent">{{ (artifact.system_prompt or "") }}{% if artifact.user_prompt_sent %}
 
 {{ artifact.user_prompt_sent }}{% endif %}</pre>
 
   {% if artifact.placeholder_map %}
-  <h3>placeholder → real <span class="muted small">(kept local, never sent)</span></h3>
-  <dl class="kv mono small">
-    {% for ph, real in artifact.placeholder_map.items() %}<dt>{{ ph }}</dt><dd>{{ real }}</dd>{% endfor %}
-  </dl>
+  <div class="subhead">placeholder → real <span class="muted">(kept local, never sent)</span> <span class="flag hold">never transmitted</span></div>
+  <div class="mask-map">
+    {% for ph, real in artifact.placeholder_map.items() %}
+    <div class="row"><span class="ph">{{ ph }}</span><span class="arrow">→</span><span class="real">{{ real }}</span></div>
+    {% endfor %}
+  </div>
   {% endif %}
 
-  <h3>Model output <span class="muted small">(raw — still masked)</span></h3>
+  <div class="subhead">Model output <span class="muted">(raw — still masked)</span></div>
   <pre class="code">{{ artifact.response_raw or "(empty)" }}</pre>
 
   {% if artifact.response_unmasked %}
-  <h3>Restored locally for the report <span class="muted small">(unmasked)</span></h3>
+  <div class="subhead">Restored locally for the report <span class="muted">(unmasked)</span> <span class="flag local">safe · local</span></div>
   <pre class="code restored">{{ artifact.response_unmasked }}</pre>
   {% endif %}
 </section>

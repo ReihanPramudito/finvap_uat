@@ -11,8 +11,8 @@
 
 <section class="card">
   {% if projects %}
-  <div class="table-wrap">
-    <table>
+  <div class="table-wrap projects-wrap">
+    <table class="t-projects">
       <thead>
         <tr><th>Project</th><th>Targets</th><th class="num">Findings</th><th>Created</th><th></th></tr>
       </thead>
@@ -20,25 +20,32 @@
         {% for p in projects %}
         <tr class="{{ 'active-row' if p.active else '' }}">
           <td>
-            <form method="post" action="/projects/{{ p.slug }}/rename" class="rename-form">
-              <input name="name" value="{{ p.name }}" aria-label="Project name">
-              <button type="submit" class="btn tiny">Rename</button>
-            </form>
-            {% if p.active %}<span class="chip low">active</span>{% endif %}
+            <div class="project-cell">
+              <form method="post" action="/projects/{{ p.slug }}/rename" class="rename-form">
+                <input name="name" value="{{ p.name }}" aria-label="Project name">
+                <button type="submit" class="btn tiny">Rename</button>
+              </form>
+              {% if p.active %}<span class="chip low">active</span>{% endif %}
+            </div>
           </td>
           <td class="mono small">{{ p.targets or "—" }}</td>
           <td class="num">{{ p.n_findings }}</td>
           <td class="muted small">{{ p.created_at[:10] }}</td>
-          <td class="num row-actions">
-            <form method="post" action="/projects/{{ p.slug }}/activate">
-              <button type="submit" class="btn primary tiny">Open</button>
-            </form>
-            <details class="del">
-              <summary class="btn tiny">Delete</summary>
-              <form method="post" action="/projects/{{ p.slug }}/delete">
-                <button type="submit" class="btn tiny danger">Confirm delete</button>
+          <td class="row-actions">
+            <div class="actions">
+              <form method="post" action="/projects/{{ p.slug }}/activate">
+                <button type="submit" class="btn primary tiny">Open</button>
               </form>
-            </details>
+              <details class="del">
+                <summary class="btn tiny">Delete</summary>
+                <div class="del-pop">
+                  <span class="warn">Delete this project and all its findings?</span>
+                  <form method="post" action="/projects/{{ p.slug }}/delete">
+                    <button type="submit" class="btn tiny danger wide">Confirm delete</button>
+                  </form>
+                </div>
+              </details>
+            </div>
           </td>
         </tr>
         {% endfor %}

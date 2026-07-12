@@ -5,13 +5,13 @@
 {% block content %}
 <section class="page-head">
   <h1>Set up the assessment</h1>
-  <p class="muted">Choose the run options and tag each asset's business context, then
+  <p class="muted">Set the run options and tag each asset, then
     <strong>Start analysis</strong> — FinVAP scores every finding, maps it to the
-    framework's clauses and writes the AI description/recommendation. You refine
-    everything afterwards in the UI.</p>
+    framework's clauses, and writes the AI description/recommendation. Refine it all
+    afterwards.</p>
 </section>
 
-<form hx-post="/setup/start" hx-target="#setup-result" hx-swap="innerHTML"
+<form class="page-form" hx-post="/setup/start" hx-target="#setup-result" hx-swap="innerHTML"
       hx-disabled-elt="find button">
 
   <section class="card">
@@ -60,10 +60,9 @@
       {% endfor %}
     </div>
 
-    <p class="help muted tiny">Risk scores use official CVSS data from the
-      <strong>NVD</strong> (online lookup). If the NVD can't be reached, FinVAP
-      automatically falls back to the scanner's native and derived CVSS — scores
-      may differ slightly where the NVD has an official vector.</p>
+    <p class="help muted tiny">Scores use official CVSS from the <strong>NVD</strong>
+      (online). If it's unreachable, FinVAP falls back to scanner-native/derived
+      vectors — scores may differ slightly.</p>
 
     <details class="api-keys">
       <summary>Cloud API keys <span class="muted small">— only for the openai / anthropic providers</span></summary>
@@ -71,7 +70,7 @@
         {% include "_api_keys.html" %}
       </div>
       <span class="help muted tiny">Stored locally in <span class="mono">finvap.secrets.json</span>
-        (gitignored, not in backups). A saved key overrides the environment variable.</span>
+        (gitignored, not backed up); a saved key overrides the env var.</span>
     </details>
   </section>
 

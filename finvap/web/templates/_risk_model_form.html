@@ -1,9 +1,9 @@
 {% macro lvl(name, cur, dflt, options) -%}
-<span class="lvl-cell">
-  <select name="{{ name }}" class="lvl{% if cur != dflt %} changed{% endif %}">
+<span class="lvl-cell{% if cur != dflt %} is-changed{% endif %}">
+  <select name="{{ name }}" class="lvl{% if cur != dflt %} changed{% endif %}" data-default="{{ dflt }}">
     {% for o in options %}<option value="{{ o }}"{% if o == cur %} selected{% endif %}>{{ o }}</option>{% endfor %}
   </select>
-  {%- if cur != dflt %}<span class="chg" title="changed from {{ dflt }}">●</span>{% endif %}
+  <span class="marker" aria-hidden="true"></span>
 </span>
 {%- endmacro %}
 
@@ -17,7 +17,7 @@
 </div>
 {% endif %}
 
-<form hx-post="/risk-model" hx-target="#risk-form" hx-swap="innerHTML">
+<form class="page-form" hx-post="/risk-model" hx-target="#risk-form" hx-swap="innerHTML">
 
   <section class="card">
     <h2>Data sensitivity <span class="muted small">→ Confidentiality / Integrity requirement (CR / IR)</span></h2>
@@ -74,12 +74,12 @@
     <h2>Exposure <span class="muted small">→ Modified Attack Vector for internal‑only hosts</span></h2>
     <label class="tag-field risk-narrow">
       <span class="muted small">Steps to lower the Attack Vector when exposure = internal</span>
-      <span class="lvl-cell">
-        <select name="de_exposure_internal_av_steps"
+      <span class="lvl-cell{% if eff.exposure.internal_av_steps != default.exposure.internal_av_steps %} is-changed{% endif %}">
+        <select name="de_exposure_internal_av_steps" data-default="{{ default.exposure.internal_av_steps }}"
                 class="lvl{% if eff.exposure.internal_av_steps != default.exposure.internal_av_steps %} changed{% endif %}">
           {% for n in [0, 1, 2] %}<option value="{{ n }}"{% if n == eff.exposure.internal_av_steps %} selected{% endif %}>{{ n }}</option>{% endfor %}
         </select>
-        {% if eff.exposure.internal_av_steps != default.exposure.internal_av_steps %}<span class="chg" title="changed from {{ default.exposure.internal_av_steps }}">●</span>{% endif %}
+        <span class="marker" aria-hidden="true"></span>
       </span>
       <span class="help muted tiny">CVSS orders Attack Vector <strong>N</strong>etwork →
         <strong>A</strong>djacent → <strong>L</strong>ocal → <strong>P</strong>hysical (most to

@@ -11,30 +11,35 @@
 
 <section class="card">
   {% if events %}
-  <div class="table-wrap">
-    <table>
+  <div class="table-wrap flush">
+    <table class="t-audit">
       <thead>
         <tr><th>ID</th><th>Time</th><th>Run</th><th>Command</th><th>Action</th>
             <th>Target</th><th>Status</th><th>What happened</th></tr>
       </thead>
       <tbody>
         {% for e in events %}
-        <tr class="clickable" data-href="/logs/{{ e.id }}">
-          <td class="mono">#{{ e.id }}</td>
-          <td class="mono small" title="{{ e.date }}">{{ e.time }}</td>
-          <td class="mono small">{{ e.run }}</td>
-          <td>{{ e.command }}</td>
-          <td class="mono small">{{ e.action }}{% if e.has_ai %} <span class="chip ai">AI</span>{% endif %}</td>
-          <td class="mono small">{{ e.target }}</td>
+        <tr class="clickable" tabindex="0" data-href="/logs/{{ e.id }}">
+          <td class="mono c-id">#{{ e.id }}</td>
+          <td class="mono c-time" title="{{ e.date }}">{{ e.time }}</td>
+          <td class="mono c-run">{{ e.run }}</td>
+          <td class="c-cmd">{{ e.command }}</td>
+          <td><span class="c-action-cell mono c-action">{{ e.action }}{% if e.has_ai %} <span class="chip ai">AI</span>{% endif %}</span></td>
+          <td class="mono c-target" title="{{ e.target }}">{{ e.target }}</td>
           <td><span class="status {{ e.status }}">{{ e.status }}</span></td>
-          <td class="muted small">{{ e.summary }}</td>
+          <td class="c-what"><span class="clip">{{ e.summary }}</span></td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
   {% else %}
-  <p class="empty muted">No audit events recorded yet.</p>
+  <div class="audit-empty">
+    <div class="glyph" aria-hidden="true">◷</div>
+    <h3>No audit events recorded yet.</h3>
+    <p>Every state-changing action — scans, mapping, LLM calls, edits — will appear
+      here in order, most recent first.</p>
+  </div>
   {% endif %}
 </section>
 {% endblock %}

@@ -13,9 +13,34 @@
     if (el) window.location = el.getAttribute("data-href");
   });
 
+  // Keyboard: Enter on a focused [data-href] element (e.g. an audit row with tabindex) navigates.
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter") return;
+    if (e.target.closest("a, button, input, select, textarea")) return;
+    var el = e.target.closest("[data-href]");
+    if (el) window.location = el.getAttribute("data-href");
+  });
+
   // Close the topbar project menu when clicking anywhere outside it.
   document.addEventListener("click", function (e) {
-    document.querySelectorAll("details.project-menu[open]").forEach(function (d) {
+    document.querySelectorAll("details.project-menu[open], details.del[open]").forEach(function (d) {
+      if (!d.contains(e.target)) d.removeAttribute("open");
+    });
+  });
+
+  // Tag-guide popovers act like an accordion: opening one closes the others.
+  // `toggle` doesn't bubble, so listen in the capture phase.
+  document.addEventListener("toggle", function (e) {
+    var d = e.target;
+    if (!d.open || !d.matches || !d.matches("details.tag-guide")) return;
+    document.querySelectorAll("details.tag-guide[open]").forEach(function (o) {
+      if (o !== d) o.removeAttribute("open");
+    });
+  }, true);
+
+  // Clicking outside an open tag-guide popover closes it.
+  document.addEventListener("click", function (e) {
+    document.querySelectorAll("details.tag-guide[open]").forEach(function (d) {
       if (!d.contains(e.target)) d.removeAttribute("open");
     });
   });
@@ -55,5 +80,41 @@
       target: "#model-field", swap: "innerHTML",
       values: { provider: prov ? prov.value : "ollama" },
     });
+  });
+
+  // Risk-model L/M/H pickers: light the "changed" marker + tint the select whenever
+  // its value differs from the shipped default (data-default). Delegated + re-synced
+  // after htmx swaps so it survives Save / Reset re-renders.
+  function syncLvl(sel) {
+    if (!sel.classList.contains("lvl") || !sel.hasAttribute("data-default")) return;
+    var changed = sel.value !== sel.getAttribute("data-default");
+    sel.classList.toggle("changed", changed);
+    var cell = sel.closest(".lvl-cell");
+    if (cell) cell.classList.toggle("is-changed", changed);
+  }
+  function syncAllLvl(root) {
+    (root || document).querySelectorAll("select.lvl[data-default]").forEach(syncLvl);
+  }
+  document.addEventListener("change", function (e) {
+    if (e.target && e.target.matches && e.target.matches("select.lvl")) syncLvl(e.target);
+  });
+  document.body.addEventListener("htmx:afterSwap", function (e) { syncAllLvl(e.target); });
+  syncAllLvl();
+
+  // Report-input screenshots: show a local preview when an image is picked (before upload).
+  // Delegated so it survives HTMX swaps of #finding-body.
+  document.addEventListener("change", function (e) {
+    var inp = e.target;
+    if (!inp.matches || !inp.matches('input[type="file"][data-preview]')) return;
+    var box = document.getElementById(inp.dataset.preview);
+    if (!box) return;
+    var img = box.querySelector("img");
+    var file = inp.files && inp.files[0];
+    if (file && file.type.indexOf("image/") === 0) {
+      img.src = URL.createObjectURL(file);
+      box.classList.add("has-img");
+    } else {
+      box.classList.remove("has-img");
+    }
   });
 })();

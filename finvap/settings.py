@@ -19,22 +19,22 @@ from . import config
 KEYS: list[dict] = [
     {"key": "framework", "type": "choice", "choices": ["rmit", "trm"], "default": "rmit",
      "label": "Regulatory framework",
-     "help": "Which regulation findings are mapped against and cited in the report — "
+     "help": "Framework findings are mapped and cited against: "
              "BNM RMiT (Malaysia) or MAS TRM (Singapore)."},
     {"key": "cvss", "type": "choice", "choices": ["3.1", "4.0"], "default": "3.1",
      "label": "CVSS version",
-     "help": "CVSS version used to score and display risk. 3.1 lets high-value assets "
-             "amplify above the base score; 4.0 holds the worst case and only de-amplifies."},
+     "help": "Scoring/display version. 3.1 lets high-value assets amplify above "
+             "base; 4.0 caps at the worst case and only de-amplifies."},
     {"key": "provider", "type": "choice",
      "choices": ["ollama", "openai", "anthropic", "template"], "default": "ollama",
      "label": "LLM provider",
-     "help": "Which LLM re-ranks regulatory clauses and writes the report prose. "
-             "ollama = local & private (default); openai/anthropic = cloud (needs an API "
-             "key — data leaves the host); template = no LLM (mapping can't run)."},
+     "help": "LLM that re-ranks clauses and writes report prose. ollama = local/"
+             "private; openai/anthropic = cloud (needs a key, data leaves the host); "
+             "template = no LLM (no mapping)."},
     {"key": "model", "type": "model", "default": "",
      "label": "LLM model id",
-     "help": "Model id for the chosen provider (e.g. granite3.3:8b, gpt-4o-mini, "
-             "claude-sonnet-4-6). Leave blank to use the provider's default."},
+     "help": "Model for the provider (e.g. granite3.3:8b, gpt-4o-mini, "
+             "claude-sonnet-4-6). Blank = provider default."},
     # No longer surfaced in the UI: scoring always uses the online NVD and falls
     # back to scan-native/derived vectors at runtime if it's unreachable. Kept as an
     # internal default (and a knob the test suite can flip to stay off the network).
@@ -44,9 +44,8 @@ KEYS: list[dict] = [
              "only). Internal default — scoring is always online with a runtime fallback."},
     {"key": "template", "type": "str", "default": "",
      "label": "Report template (.docx)",
-     "help": "A custom Word template in templates/ to fill (e.g. 'VA Template.docx'). "
-             "Blank = the bundled default template. Engagement/client details are "
-             "collected on the Report page."},
+     "help": "Custom Word template from templates/ (e.g. 'VA Template.docx'). "
+             "Blank = bundled default. Client details live on the Report page."},
 ]
 
 _DEFAULTS = {k["key"]: k["default"] for k in KEYS}
