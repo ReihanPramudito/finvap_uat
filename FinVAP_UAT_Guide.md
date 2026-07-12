@@ -28,7 +28,7 @@ local web interface that opens automatically.
 |---|---|
 | **Time needed** | ~30–40 min hands-on. *Note: the scan + analysis (~1–1.5 hrs) run unattended in the background |
 | **OS** | Kali Linux or Debian-based Linux |
-| **Requires** | Python 3.13, ~10 GB free disk (GVM scan feeds + the ~5 GB LLM model), sudo access, internet connection |
+| **Requires** | Python 3.13, ~20 GB free disk (GVM scan feeds + the ~5 GB LLM model + scan/report data — leave real headroom), sudo access, internet connection |
 | **You'll need** | A test target to scan. (a free vulnerable VM set up in **Step 5** below) |
 
 > **Authorisation notice:** You must only scan systems you own or have explicit
