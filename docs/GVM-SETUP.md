@@ -4,6 +4,10 @@ FinVAP's vulnerability scanning uses **Greenbone Vulnerability Manager (GVM /
 OpenVAS)**. You only need this for the GVM scan — `finvap <ip> --no-gvm` (nmap
 discovery only) and `finvap <file.nessus>` (import) work without it.
 
+> **VM sizing:** give the VM **at least 6 GB RAM** (4 GB is Greenbone's bare
+> minimum and can stall the feed ingest). The feed sync and scans are the
+> memory-hungry parts.
+
 ```bash
 sudo apt update && sudo apt install -y gvm gvm-tools
 sudo gvm-setup        # syncs feeds (~1–3 hrs, several GB) + creates the admin user

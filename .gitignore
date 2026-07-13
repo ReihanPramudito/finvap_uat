@@ -9,6 +9,9 @@ dist/
 # runtime data / secrets
 data/
 *.db
+# ...but DO ship the bundled sample assessment — it's seeded on first launch so
+# testers can explore the UI without waiting on a GVM scan.
+!finvap/samples/*.db
 .env
 .chroma/
 

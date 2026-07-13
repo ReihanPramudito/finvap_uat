@@ -26,16 +26,17 @@ local web interface that opens automatically.
 
 | | |
 |---|---|
-| **Time needed** | ~30–40 min hands-on. *Note: the scan + analysis (~1–1.5 hrs) run unattended in the background |
+| **Time needed** | ~30–40 min hands-on on the quick path (bundled sample, no scan). Add ~1–3 hrs unattended if you set up a real GVM scan (optional). |
 | **OS** | Kali Linux or Debian-based Linux |
-| **Requires** | Python 3.13, ~20 GB free disk (GVM scan feeds + the ~5 GB LLM model + scan/report data — leave real headroom), sudo access, internet connection |
-| **You'll need** | A test target to scan. (a free vulnerable VM set up in **Step 5** below) |
+| **Requires** | Python 3.13, ~8 GB free disk (the ~5 GB LLM model + scan/report data), sudo access, internet connection. *The optional live-scan path additionally needs GVM (~15 GB more of feed data) and **at least 6 GB RAM** — 4 GB can stall the feed ingest.* |
+| **You'll need** | Nothing extra for the quick path — a **sample scan ships with FinVAP**. Only the optional live-scan path needs a target VM (set up in **Optional B** below). |
 
 > **Authorisation notice:** You must only scan systems you own or have explicit
 > written authorisation to test. Unauthorised scanning of third-party systems may
 > constitute an offence under computer-misuse legislation in your jurisdiction and
-> is strictly outside the scope of this evaluation. Step 5 provides a dedicated,
-> self-hosted test target for this purpose.
+> is strictly outside the scope of this evaluation. The quick path avoids this
+> entirely (it uses the bundled sample), and **Optional B** provides a dedicated,
+> self-hosted test target if you do run a live scan.
 
 ---
 
@@ -53,7 +54,50 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e .
 ```
 
-## Step 3 - Set up Greenbone/GVM (vulnerability scanning)
+## Step 3 - Install the local LLM
+
+Powers the regulatory clause mapping and the AI-written report. Runs
+entirely on your machine.
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull granite3.3:8b
+```
+
+This downloads a ~5 GB model which can take a few minutes depending on your
+connection.
+
+## Step 4 - Run FinVAP (uses the bundled sample — no scan needed)
+
+That's the whole quick-path setup: **Steps 1–3, no GVM and no vulnerable VM.**
+On a fresh install (before you've run any scan of your own), just launch the UI:
+
+```bash
+finvap web
+```
+
+FinVAP seeds a **sample DC-1 scan** — the raw findings from a real GVM scan, and
+nothing else (no risk scores, no clause mappings, no AI write-ups). The UI opens
+straight on the **Setup page**, exactly as it would the moment your own scan
+finished. From here you do the real evaluation yourself: tag the asset, run the
+analysis, review the findings, and generate the report.
+
+**This is the primary path.** Skip Scenarios 1–2 (host discovery + the live
+scan) and start at **Scenario 3** — everything from there works on the sample.
+
+> The sample only appears on a brand-new install. Once you run your own live
+> scan (below), that becomes your project and the sample stays out of the way.
+
+---
+
+## Optional — run a real live scan instead
+
+Only do this if you want to exercise the full scan pipeline (Scenarios 1–2)
+against a live machine. It's the slow part — the GVM feed sync alone takes ~1–3
+hours — so it's entirely optional for UAT; the bundled sample above already lets
+you evaluate everything else.
+
+### Optional A - Set up Greenbone/GVM (vulnerability scanning)
 
 One-time setup. The feed sync is the slow part — **allow ~1–3 hours** (several GB
 of NVT/SCAP/CERT data, network-dependent). It runs unattended, so start it and
@@ -70,20 +114,7 @@ finvap doctor                              # confirm everything is ready before 
 `finvap doctor` should show all green/OK. If it doesn't, see **Troubleshooting**
 below before moving on. Don't proceed with a failing `doctor` check.
 
-## Step 4 - Install the local LLM
-
-Powers the regulatory clause mapping and the AI-written report. Runs
-entirely on your machine.
-
-```bash
-curl -fsSL https://ollama.com/install.sh | sh
-ollama pull granite3.3:8b
-```
-
-This downloads a ~5 GB model which can take a few minutes depending on your
-connection.
-
-## Step 5 - Get a target to scan
+### Optional B - Get a target to scan
 
 FinVAP needs something to scan. Use **DC-1**, a free, purpose-built vulnerable VM
 from VulnHub.
@@ -104,6 +135,11 @@ its IP.
 
 Do these in order. Each ends with what you should see. If something doesn't
 match, note it.
+
+> **On the quick path (bundled sample)?** Start at **Scenario 3** — the sample is
+> already loaded and the UI is on the Setup page. Scenarios 1–2 below cover host
+> discovery and a live scan, which only apply if you set up the optional GVM +
+> target VM.
 
 ### Scenario 1 - Discover the target's IP on your network
 

@@ -28,6 +28,7 @@ dependencies = [
 # the PDF (the DOCX is written with pure-Python python-docx).
 
 [project.optional-dependencies]
+dev = ["pytest>=8"]
 cloud = ["anthropic>=0.40"]  # Obj 4: optional native Claude provider for reports
 
 [project.scripts]
@@ -40,6 +41,11 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 include = ["finvap*"]
 
-# Ship the web UI's non-Python assets (templates + static) inside the package.
+# Ship the web UI's non-Python assets (templates + static) + the bundled sample
+# assessment (a pre-finished DC-1 scan seeded on first launch) inside the package.
 [tool.setuptools.package-data]
 "finvap.web" = ["templates/*.html", "static/css/*.css", "static/js/*.js"]
+"finvap" = ["samples/*.db", "samples/*.json", "samples/uploads/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

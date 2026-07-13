@@ -16,7 +16,6 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-import click
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -46,12 +45,15 @@ class DefaultGroup(TyperGroup):
     default_cmd = "assess"
 
     def resolve_command(self, ctx, args):
-        try:
-            return super().resolve_command(ctx, args)
-        except click.exceptions.UsageError:
-            if args and not args[0].startswith("-"):
-                return super().resolve_command(ctx, [self.default_cmd, *args])
-            raise
+        # Route a bare first token that isn't a known subcommand (and isn't an
+        # option/flag) to the hidden `assess` command, so `finvap <target>` runs.
+        # Decide up front via get_command rather than catching a UsageError from
+        # super(): Typer >= 0.26 no longer lets that error propagate here, which
+        # silently broke the old exception-based form (bare `finvap <ip>` printed
+        # "No such command"). The lookup-first form is version-robust.
+        if args and not args[0].startswith("-") and self.get_command(ctx, args[0]) is None:
+            args = [self.default_cmd, *args]
+        return super().resolve_command(ctx, args)
 
 
 app = typer.Typer(
@@ -150,7 +152,13 @@ def web(
         console.print("[red]The web UI needs FastAPI + uvicorn.[/red] "
                       "Reinstall with `pip install -e .` to pull them in.")
         raise typer.Exit(1) from e
-    launch(port=port, open_browser=not no_browser, console=console)
+    # First run with no projects: drop in the bundled sample scan so the UI has
+    # something to show without a GVM scan. A freshly-seeded sample opens on the
+    # Setup page, mirroring the hand-off right after a real scan completes.
+    from . import samples
+    seeded = samples.ensure_seeded(console)
+    launch(port=port, open_browser=not no_browser, console=console,
+           path="/setup" if seeded else "/")
 
 
 @app.command()
