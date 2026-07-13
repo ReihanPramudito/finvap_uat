@@ -55,8 +55,9 @@ pip install -e .
 
 ## Step 3 - Set up Greenbone/GVM (vulnerability scanning)
 
-One-time setup. The feed sync might be slow part (several GB, let it run in the
-background).
+One-time setup. The feed sync is the slow part — **allow ~1–3 hours** (several GB
+of NVT/SCAP/CERT data, network-dependent). It runs unattended, so start it and
+walk away; just don't scan until `finvap doctor` reports ready.
 
 ```bash
 sudo apt update && sudo apt install -y gvm gvm-tools

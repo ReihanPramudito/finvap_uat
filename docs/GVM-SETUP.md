@@ -6,10 +6,14 @@ discovery only) and `finvap <file.nessus>` (import) work without it.
 
 ```bash
 sudo apt update && sudo apt install -y gvm gvm-tools
-sudo gvm-setup        # syncs feeds (long, several GB) + creates the admin user
+sudo gvm-setup        # syncs feeds (~1–3 hrs, several GB) + creates the admin user
 sudo gvm-check-setup  # verify
 sudo gvm-start
 ```
+
+The `gvm-setup` feed sync is the slow part — **allow ~1–3 hours** (several GB of
+NVT/SCAP/CERT data, network-dependent). It runs unattended, so start it and walk
+away; don't scan until `finvap doctor` reports ready.
 
 Then export the admin credentials `gvm-setup` printed:
 
