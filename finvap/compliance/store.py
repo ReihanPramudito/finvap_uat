@@ -54,14 +54,32 @@ def index_count(framework: str) -> int:
         return 0
 
 
+def ensure_index(framework: str, progress=None) -> int:
+    """Build the clause index on first use if it's missing or stale.
+
+    The index lives under ``data/.chroma`` (client-scoped, gitignored), so a
+    fresh install / UAT pull never ships it. It's rebuilt deterministically from
+    the shipped regulation PDFs — the first build downloads the ~80 MB ONNX model
+    and embeds the corpus, so it can take a moment. Returns the clause count now
+    in the index; a no-op once the index matches the corpus.
+    """
+    clauses = load_clauses(framework)
+    if clauses and index_count(framework) == len(clauses):
+        return len(clauses)
+    if progress:
+        progress(f"building {framework.upper()} clause index ({len(clauses)} clauses)…")
+    return build_index(framework, clauses)
+
+
 def query(framework: str, text: str, k: int = 3, floor: float = 0.2) -> list[dict]:
     """Return up to k clause matches with cosine similarity >= floor, best first."""
     try:
         col = _client().get_collection(_name(framework))
     except Exception as e:
         raise RuntimeError(
-            f"No clause index for {framework.upper()} — run "
-            f"`finvap map --framework {framework} --rebuild` first."
+            f"No clause index for {framework.upper()} — it is built "
+            f"automatically from the regulation PDFs; check that "
+            f"regulations/ is present and readable."
         ) from e
     if not text.strip():
         return []

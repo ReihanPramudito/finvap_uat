@@ -129,6 +129,10 @@ def map_findings(*, framework: str, k: int = 8, floor: float = 0.0, progress=Non
     from . import rerank
 
     prov = provider or get_provider()
+    # Build the clause vector index on first use (missing on a fresh install —
+    # it's client-scoped data, not shipped). Deterministic from the reg PDFs.
+    store.ensure_index(framework,
+                       progress=(lambda s: progress(0, 1, s)) if progress else None)
     stats = {"mapped": 0, "no_match": 0, "raised": 0, "lowered": 0,
              "unscored": 0, "overridden": 0, "info_skipped": 0}
     with get_session() as session:
