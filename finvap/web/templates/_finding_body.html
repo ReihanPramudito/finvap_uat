@@ -192,6 +192,7 @@
             </form>
           </div>
           {% if c.section %}<div class="clause-title">{{ c.section }}</div>{% endif %}
+          {% if c.excerpt %}<div class="clause-excerpt">{{ c.excerpt }}{% if c.excerpt|length >= 300 %}…{% endif %}</div>{% endif %}
           {% if c.reason %}<div class="clause-reason">{{ c.reason }}</div>{% endif %}
         </li>
         {% endfor %}

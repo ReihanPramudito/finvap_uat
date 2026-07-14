@@ -58,8 +58,11 @@ def _norm(lines: list[str]) -> str:
 # --- MAS TRM ---------------------------------------------------------------
 _TRM_DROP = re.compile(r"^(technology risk management guidelines|monetary authority of singapore)", re.I)
 _TRM_CLAUSE = re.compile(r"^(\d+\.\d+\.\d+)\s+(.*)")
-_TRM_SUBSEC = re.compile(r"^\d+\.\d+\s+([A-Z].*)")
-_TRM_SECTION = re.compile(r"^\d+\s+([A-Z].*)")
+# A heading is a short Title-Case line standing alone — not a wrapped clause
+# sentence that happens to begin "6.1 ...". Bound the length and forbid the
+# mid-sentence punctuation (".", ":", ";") that marks running prose.
+_TRM_SUBSEC = re.compile(r"^\d+\.\d+\s+([A-Z][A-Za-z0-9 &/,'()-]{1,58})$")
+_TRM_SECTION = re.compile(r"^\d+\s+([A-Z][A-Za-z0-9 &/,'()-]{1,58})$")
 
 
 def parse_trm(path: Path) -> list[Clause]:
@@ -87,15 +90,22 @@ def parse_trm(path: Path) -> list[Clause]:
                 flush()
                 cur_id, _ = m.group(1), buf.append(m.group(2))
                 continue
-            if cur_id is None:  # only treat headings as such between clauses
-                sub = _TRM_SUBSEC.match(line)
-                sec = _TRM_SECTION.match(line)
-                if sub:
-                    section = sub.group(1).strip()
-                elif sec:
-                    section = sec.group(1).strip()
+            # A section/subsection heading ends the current clause and renames
+            # the section. These appear between clauses throughout the document,
+            # so we must detect them even while a clause is open — otherwise the
+            # section stays frozen at the first heading for every clause.
+            sub = _TRM_SUBSEC.match(line)
+            sec = _TRM_SECTION.match(line)
+            if sub:
+                flush()
+                section = sub.group(1).strip()
                 continue
-            buf.append(line)
+            if sec:
+                flush()
+                section = sec.group(1).strip()
+                continue
+            if cur_id is not None:
+                buf.append(line)
     flush()
     return clauses
 
