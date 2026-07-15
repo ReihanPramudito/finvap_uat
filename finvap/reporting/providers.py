@@ -4,7 +4,9 @@ Local-first (privacy NFR): the default is **Ollama** on localhost — data never
 leaves the host. Opt-in cloud providers (any **OpenAI-compatible** endpoint, e.g.
 a company's own LLM, or **native Claude**) are available for users who accept the
 trade-off and set an API key. ``template`` is a no-LLM fallback so a grounded
-report still generates with no model at all.
+report still generates with no model at all. Both cloud providers work over
+plain HTTP (``httpx``) with just an API key — no extra SDK required; the
+optional ``anthropic`` package is used opportunistically when present.
 
 Every provider implements ``available()`` (actionable reachability check, like
 ``finvap doctor``) and ``complete(system, user)``. PII is already masked by the
@@ -160,7 +162,10 @@ class OpenAICompatProvider:
 
 
 class AnthropicProvider:
-    """Native Claude via the official Anthropic SDK (optional `cloud` extra)."""
+    """Native Claude. Prefers the official SDK (optional `cloud` extra) but
+    falls back to the raw HTTP Messages API when it's not installed — the
+    same fallback `_anthropic_models()` already uses for model discovery, so
+    a model picked there doesn't go on to fail here with an SDK error."""
     name = "anthropic"
 
     def __init__(self, model: str, api_key: str | None = None):
@@ -170,22 +175,38 @@ class AnthropicProvider:
     def available(self) -> tuple[bool, str]:
         if not self.api_key:
             return False, "no API key — set it on the Setup page (or the ANTHROPIC_API_KEY env var)."
-        try:
-            import anthropic  # noqa: F401
-        except ImportError:
-            return False, "anthropic SDK not installed — `pip install -e \".[cloud]\"`."
         return True, f"anthropic:{self.model}"
 
     def complete(self, system: str, user: str, max_tokens: int = 4000,
                  temperature: float = 0.2) -> str:
         try:
             import anthropic
+        except ImportError:
+            return self._complete_http(system, user, max_tokens, temperature)
+        try:
             client = anthropic.Anthropic(api_key=self.api_key)
             msg = client.messages.create(
                 model=self.model, max_tokens=max_tokens, temperature=temperature,
                 system=system, messages=[{"role": "user", "content": user}],
             )
             return "".join(b.text for b in msg.content if b.type == "text").strip()
+        except Exception as e:
+            raise LLMError(f"Anthropic generation failed: {e}") from e
+
+    def _complete_http(self, system: str, user: str, max_tokens: int, temperature: float) -> str:
+        import httpx
+        try:
+            r = httpx.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={"x-api-key": self.api_key, "anthropic-version": "2023-06-01",
+                         "content-type": "application/json"},
+                json={"model": self.model, "max_tokens": max_tokens, "temperature": temperature,
+                      "system": system, "messages": [{"role": "user", "content": user}]},
+                timeout=120,
+            )
+            r.raise_for_status()
+            blocks = r.json().get("content", [])
+            return "".join(b.get("text", "") for b in blocks if b.get("type") == "text").strip()
         except Exception as e:
             raise LLMError(f"Anthropic generation failed: {e}") from e
 

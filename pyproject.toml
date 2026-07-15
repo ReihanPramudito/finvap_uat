@@ -29,7 +29,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
-cloud = ["anthropic>=0.40"]  # Obj 4: optional native Claude provider for reports
+cloud = ["anthropic>=0.40"]  # Obj 4: optional native Claude SDK (the provider also works over raw HTTP without it)
 
 [project.scripts]
 finvap = "finvap.cli:app"
