@@ -254,22 +254,55 @@ def _title_env(value: str) -> str:
 def _replace_in_para(p, mapping: dict) -> None:
     """Replace ``{{tokens}}`` in a paragraph, even when split across runs.
 
-    Concatenates the paragraph's text nodes, substitutes, then writes the result
-    into the first text node and blanks the rest, dropping the authoring highlight
-    on the filled run. Untouched if no key is present.
+    Substitutes within each contiguous run of *plain* text, treating field regions
+    (``fldSimple`` and complex ``fldChar`` fields, e.g. inline DOCPROPERTY) as
+    boundaries. A field's runs are left untouched, so a resolved property value is
+    never flattened into the sentence *and* left behind for the consumer to
+    re-render — which previously duplicated the client/company short-name at the
+    end of the paragraph. Untouched if no key is present.
     """
-    tnodes = list(p.iter(_q("t")))
-    if not tnodes:
-        return
-    full = "".join(t.text or "" for t in tnodes)
-    if not any(k in full for k in mapping):
-        return
-    for k, v in mapping.items():
-        full = full.replace(k, v)
-    tnodes[0].text = full
-    for t in tnodes[1:]:
-        t.text = ""
-    _unhighlight_para(p)
+    segments: list[list] = []      # each = the <w:t> nodes of one plain-text run of the paragraph
+    current: list = []
+    field_depth = 0                # >0 while inside a complex fldChar begin…end field
+
+    def _flush():
+        nonlocal current
+        if current:
+            segments.append(current)
+            current = []
+
+    for child in list(p):
+        if child.tag == _q("fldSimple"):
+            _flush()               # a simple field — its value is resolved in place, leave it
+            continue
+        if child.tag != _q("r"):
+            continue               # pPr, bookmarks, etc.
+        fld = child.find(_q("fldChar"))
+        if fld is not None:        # complex-field boundary marker
+            ftype = fld.get(_q("fldCharType"))
+            if ftype == "begin":
+                _flush(); field_depth += 1
+            elif ftype == "end":
+                field_depth = max(0, field_depth - 1); _flush()
+            continue
+        if child.find(_q("instrText")) is not None or field_depth > 0:
+            continue               # a field's instruction or result run — leave it alone
+        current.extend(child.findall(_q("t")))   # a plain run: collect its text nodes
+    _flush()
+
+    changed = False
+    for seg in segments:
+        full = "".join(t.text or "" for t in seg)
+        if not any(k in full for k in mapping):
+            continue
+        for k, v in mapping.items():
+            full = full.replace(k, v)
+        seg[0].text = full
+        for t in seg[1:]:
+            t.text = ""
+        changed = True
+    if changed:
+        _unhighlight_para(p)
 
 
 def _replace_in_elements(elements, mapping: dict) -> None:
